@@ -3,6 +3,7 @@ ops/
 
 # Data and large artifacts (kept on the shared Drive)
 data/
+!src/data/
 outputs/runs/**/*.pt
 outputs/**/png/
 *.tar

@@ -1,0 +1,49 @@
+# Frozen rendering registry render_v1 (Execution Plan D7, D8, Section 5.2). Owner: Farzaan.
+# Every rendering draws the same 30 candles + 30 volume bars from the same 30 x 5 window
+# with the same per-window scaling (price panel: window min Low .. max High; volume
+# panel: 0 .. max Volume). 224 x 224 RGB, no text. Each style changes exactly one
+# factor relative to R0. Changing anything here requires a new render_version.
+render_version: render_v1
+canvas: 224
+
+base:                        # R0 reference
+  role: reference
+  background: [255, 255, 255]
+  grid: true
+  grid_rows: 5               # horizontal grid lines across the plot area
+  grid_cols: 6               # vertical grid lines across the plot area
+  grid_color: [221, 221, 221]
+  up_color: [34, 139, 34]    # Close >= Open
+  down_color: [214, 39, 40]  # Close < Open
+  volume_color: [150, 150, 150]
+  body_frac: 0.60            # candle body width as a share of the slot
+  volume_frac: 0.60          # volume bar width as a share of the slot (same in every style)
+  wick_px: 1
+  margin: 8                  # 8 px margins -> 208 x 208 plot
+  price_frac: 0.75           # price panel = top 75% of the plot
+  volume_frac_h: 0.20        # volume panel = bottom 20% of the plot
+  axes: false
+  axis_color: [64, 64, 64]
+  tick_len: 4
+
+styles:
+  R0: {}
+  R1:                        # background tint only
+    role: seen
+    background: [226, 232, 240]
+  R2:                        # grid removed
+    role: seen
+    grid: false
+  R4:                        # palette: up blue, down orange
+    role: seen
+    up_color: [31, 119, 180]
+    down_color: [255, 127, 14]
+  R3:                        # left/bottom spines with tick marks, no numerals
+    role: held_out
+    axes: true
+  R5:                        # candle body width 35% of slot, wicks unchanged
+    role: held_out
+    body_frac: 0.35
+  R6:                        # 24 px margins -> 176 x 176 plot, same 224 canvas, never resized
+    role: held_out
+    margin: 24
