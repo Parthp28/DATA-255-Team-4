@@ -43,6 +43,18 @@ def _at_least_fp32(x: torch.Tensor) -> torch.Tensor:
     return x if x.dtype in (torch.float32, torch.float64) else x.float()
 
 
+def _check_pair(logits_a: torch.Tensor, logits_b: torch.Tensor) -> None:
+    """Both tensors must be ``(N, C)`` with equal shape, ``N >= 1`` and ``C >= 1``.
+
+    An empty batch has no mean (it would silently return ``nan`` and poison the weights
+    through ``backward()``), so it is rejected explicitly.
+    """
+    if logits_a.shape != logits_b.shape or logits_a.dim() != 2:
+        raise ValueError(f"expected two (N, C) tensors of equal shape, got {tuple(logits_a.shape)} and {tuple(logits_b.shape)}")
+    if logits_a.shape[0] == 0 or logits_a.shape[1] == 0:
+        raise ValueError(f"empty batch: need N >= 1 pairs and C >= 1 classes, got shape {tuple(logits_a.shape)}")
+
+
 class PairedLossOutput(NamedTuple):
     """Loss terms for one step. ``total`` is the only tensor to call ``backward()`` on."""
 
@@ -55,11 +67,11 @@ def js_divergence(logits_a: torch.Tensor, logits_b: torch.Tensor, reduction: str
     """Jensen-Shannon divergence between softmax(logits_a) and softmax(logits_b), in nats.
 
     Args:
-        logits_a, logits_b: raw logits of identical shape ``(N, C)``.
+        logits_a, logits_b: raw logits of identical shape ``(N, C)`` with ``N >= 1``
+            (an empty batch raises ``ValueError``).
         reduction: ``"mean"`` (scalar), ``"none"`` (per-pair, shape ``(N,)``), or ``"sum"``.
     """
-    if logits_a.shape != logits_b.shape or logits_a.dim() != 2:
-        raise ValueError(f"expected two (N, C) tensors of equal shape, got {tuple(logits_a.shape)} and {tuple(logits_b.shape)}")
+    _check_pair(logits_a, logits_b)
     if reduction not in ("mean", "none", "sum"):
         raise ValueError(f"unknown reduction: {reduction!r}")
     log_p = F.log_softmax(_at_least_fp32(logits_a), dim=-1)
@@ -88,8 +100,7 @@ def paired_consistency_loss(
     """
     if not (isinstance(lam, (int, float)) and math.isfinite(lam) and lam >= 0):
         raise ValueError(f"lam must be a finite number >= 0, got {lam!r}")
-    if logits_a.shape != logits_b.shape or logits_a.dim() != 2:
-        raise ValueError(f"expected two (N, C) tensors of equal shape, got {tuple(logits_a.shape)} and {tuple(logits_b.shape)}")
+    _check_pair(logits_a, logits_b)
     if labels.shape != (logits_a.shape[0],):
         raise ValueError(f"labels must have shape ({logits_a.shape[0]},), got {tuple(labels.shape)}")
     labels = labels.long()

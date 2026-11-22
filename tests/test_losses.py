@@ -114,6 +114,23 @@ def test_module_wrapper_matches_function():
     assert torch.equal(PairedConsistencyLoss(lam=1.0)(la, lb, labels).total, paired_consistency_loss(la, lb, labels, 1.0).total)
 
 
+def test_empty_batch_is_rejected_explicitly():
+    # N = 0 must raise, never return nan (a nan loss would corrupt the weights on backward()).
+    empty = torch.empty(0, 3)
+    labels = torch.empty(0, dtype=torch.long)
+    for lam in (0.0, 1.0):
+        with pytest.raises(ValueError, match="empty batch"):
+            paired_consistency_loss(empty, empty.clone(), labels, lam=lam)
+    for reduction in ("mean", "sum", "none"):
+        with pytest.raises(ValueError, match="empty batch"):
+            js_divergence(empty, empty.clone(), reduction=reduction)
+    with pytest.raises(ValueError, match="empty batch"):  # zero classes
+        js_divergence(torch.empty(4, 0), torch.empty(4, 0))
+    # N = 1 is the smallest valid batch and stays finite.
+    one = paired_consistency_loss(rand_logits(1, seed=19), rand_logits(1, seed=20), torch.tensor([1]), lam=1.0)
+    assert all(torch.isfinite(t) for t in one)
+
+
 def test_invalid_inputs_are_rejected():
     la, lb = rand_logits(4, seed=17), rand_logits(4, seed=18)
     labels = torch.zeros(4, dtype=torch.long)
