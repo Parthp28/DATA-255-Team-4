@@ -1,0 +1,67 @@
+# Internal coordination (never public)
+ops/
+
+# Data and large artifacts (kept on the shared Drive)
+data/
+outputs/runs/**/*.pt
+outputs/**/png/
+*.tar
+
+# Python and OS
+__pycache__/
+*.pyc
+*.cpython-*.so
+.ipynb_checkpoints/
+.DS_Store
+
+# Editor and tooling files
+CURSOR_*.md
+.cursorrules
+CLAUDE.md
+PROGRESS.md
+
+# --- Added at repository initialization (public repo safeguards) ---
+
+# Secrets and credentials (never commit)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+kaggle.json
+rclone.conf
+.netrc
+credentials*.json
+secrets/
+
+# Local environments and caches
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+*.egg-info/
+.vscode/
+.idea/
+
+# Model checkpoints, arrays, and distribution archives (kept on the shared Drive)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npy
+*.npz
+*.zip
+
+# LaTeX build files (source and compiled PDF stay trackable)
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
