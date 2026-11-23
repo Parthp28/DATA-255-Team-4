@@ -40,6 +40,15 @@ def owner_of(experiment_id: str) -> str:
     return EXPERIMENT_OWNERS[base]
 
 
+# Experiments without an image backbone: plan 5.1 runs them on CPU (E5 may move to a T4 if CPU is too slow).
+CPU_TRACK_EXPERIMENTS = ("E5", "B0")
+
+
+def has_image_backbone(record: dict) -> bool:
+    """ResNet-18 / DeiT-S runs: they need pretrained weights (D9) and the D16 GPU. E5 and B0 do not."""
+    return str(record.get("experiment_id", "")).split("-")[0] not in CPU_TRACK_EXPERIMENTS
+
+
 def logistics_fields(record: dict) -> list:
     return [k for k in record if k in LOGISTICS_KEYS or "executor" in str(k).lower()]
 
