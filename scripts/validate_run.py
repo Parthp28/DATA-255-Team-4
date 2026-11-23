@@ -29,7 +29,7 @@ import pandas as pd  # noqa: E402
 
 from src.common.schema import sha256_file  # noqa: E402
 from src.evaluation.frozen import FrozenConfigError, run_matches_frozen, verify_frozen  # noqa: E402
-from src.evaluation.gate import logistics_fields, owner_of  # noqa: E402
+from src.evaluation.gate import has_image_backbone, logistics_fields, owner_of  # noqa: E402
 
 import evaluate as ev  # noqa: E402
 
@@ -52,7 +52,7 @@ def run_checks(rec: dict, data_root, test_mode: bool = False) -> tuple[dict, str
         checks["clean_git_tree"] = rec.get("git_dirty") is False
         checks["full_data_no_step_cap"] = rec.get("max_steps") in (None, 0)
         checks["not_synthetic"] = not str(rec.get("data_version", "")).startswith("synthetic")
-        checks["pretrained_backbone"] = rec.get("pretrained") is True or str(rec.get("model", "")).startswith("numeric")
+        checks["pretrained_backbone"] = rec.get("pretrained") is True or not has_image_backbone(rec)
     paths = rec.get("prediction_paths") or []
     sha = ""
     if not paths or not Path(paths[0]).exists():
