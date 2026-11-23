@@ -65,3 +65,11 @@ report/*.blg
 report/*.fls
 report/*.fdb_latexmk
 report/*.synctex.gz
+
+# Internal planning material containing compute logistics (never public)
+/Project_Execution_Plan*.pdf
+
+# Local development fixtures and test reports
+/outputs/synthetic_dev/
+/outputs/dev/
+/outputs/tests/

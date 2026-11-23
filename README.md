@@ -62,7 +62,7 @@ python scripts/build_dataset.py --config configs/data.yaml
 python scripts/build_render_registry.py --styles configs/render_styles.yaml
 pytest -q
 python scripts/train.py --config configs/frozen/E1.yaml --seed 0
-python scripts/evaluate.py --split test --runs-from outputs/results_freeze.json
+python scripts/evaluate.py --data-root data/render_v1 --runs-from outputs/results_freeze.json --split test
 python scripts/make_report_assets.py
 ```
 
@@ -70,7 +70,7 @@ python scripts/make_report_assets.py
 
 ## Compute environment
 
-Models were trained on NVIDIA T4 GPUs with fp16 mixed precision; PyTorch and timm versions are recorded in every `run.json`. Recipe: AdamW, cosine schedule with 1 warmup epoch, at most 10 epochs, early stopping with patience 3, 128 images per step, 224 × 224 inputs, seeds 0, 1, 2; the checkpoint with the best validation Macro F1 is used for testing.
+Final reported image-model experiments are planned on NVIDIA T4 GPUs with fp16 mixed precision; PyTorch and timm versions will be recorded in every `run.json`. Planned recipe: AdamW, cosine schedule with 1 warmup epoch, at most 10 epochs, early stopping with patience 3, 128 images per step, 224 × 224 inputs, seeds 0, 1, 2; the checkpoint with the best validation Macro F1 will be used for testing.
 
 ## Repository layout
 
@@ -85,6 +85,8 @@ docs/      lessons learned, Q&A and ablation sheet, course GenAI log
 ```
 
 ## Contributions
+
+Planned technical responsibilities. This section will be revised to describe completed work at the results freeze.
 
 - **Farzaan Dalwai:** data curation, preprocessing, temporal splitting and leakage controls, counterfactual rendering pipeline, numeric baseline methodology, masking analysis.
 - **Kaushik Hariharan:** shared training infrastructure, ResNet-18 methodology and experiments, augmentation and consistency CNN experiments, Grad-CAM analysis.
