@@ -52,6 +52,7 @@ def run_checks(rec: dict, data_root, test_mode: bool = False) -> tuple[dict, str
         checks["clean_git_tree"] = rec.get("git_dirty") is False
         checks["full_data_no_step_cap"] = rec.get("max_steps") in (None, 0)
         checks["not_synthetic"] = not str(rec.get("data_version", "")).startswith("synthetic")
+        checks["pretrained_backbone"] = rec.get("pretrained") is True or str(rec.get("model", "")).startswith("numeric")
     paths = rec.get("prediction_paths") or []
     sha = ""
     if not paths or not Path(paths[0]).exists():

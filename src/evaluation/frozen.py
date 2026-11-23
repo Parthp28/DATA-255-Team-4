@@ -13,6 +13,8 @@ frozen config), scripts/validate_run.py and scripts/evaluate.py.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +36,17 @@ def config_hash_at_seed0(cfg: ExperimentConfig) -> str:
     return dataclasses.replace(cfg, seed=0).sha256()
 
 
+# Labels that do not change what is trained: the seed (one config, three seeds), the phase label, and the
+# frozen flag. A seed-0 tuning or lambda run (phase dev, frozen false) and its frozen copy (phase final,
+# frozen true) share this hash, which is what lets the selected run be promoted (plan 14.4).
+NON_SCIENTIFIC_FIELDS = ("seed", "phase", "frozen")
+
+
+def science_sha256(cfg: ExperimentConfig) -> str:
+    d = {k: v for k, v in cfg.to_dict().items() if k not in NON_SCIENTIFIC_FIELDS}
+    return hashlib.sha256(json.dumps(d, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
 def _git_commit() -> str:
     try:
         r = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=20)
@@ -48,6 +61,7 @@ def build_frozen(cfg: ExperimentConfig, provenance: dict) -> dict:
     out = frozen.to_dict()
     out["freeze_record"] = {
         "config_sha256": frozen.sha256(),
+        "science_sha256": science_sha256(frozen),
         "experiment_id": frozen.experiment_id,
         "data_version": frozen.data_version,
         "render_version": frozen.render_version,
@@ -109,14 +123,17 @@ def frozen_config_info(config_path) -> dict | None:
     if p.parent.name != FROZEN_DIR_NAME:
         return None
     rec = verify_frozen(p)
-    return {"frozen_config_path": str(p).replace("\\", "/"), "frozen_config_sha256": rec["config_sha256"]}
+    return {"frozen_config_path": str(p).replace("\\", "/"), "frozen_config_sha256": rec["config_sha256"],
+            "frozen_config_science_sha256": rec.get("science_sha256")
+            or science_sha256(ExperimentConfig.from_yaml(str(p)))}
 
 
 def run_matches_frozen(run_record: dict) -> bool:
-    """True when a run's recorded configuration equals its frozen config (any seed)."""
-    sha = run_record.get("frozen_config_sha256")
+    """True when the run trained exactly the scientific configuration of the frozen config it names
+    (any seed; the phase label and frozen flag may differ for a promoted seed-0 tuning or lambda run)."""
+    sha = run_record.get("frozen_config_science_sha256")
     if not sha:
         return False
     fields = {f.name for f in dataclasses.fields(ExperimentConfig)}
     cfg = ExperimentConfig(**{k: run_record[k] for k in fields if k in run_record})
-    return config_hash_at_seed0(cfg) == sha
+    return science_sha256(cfg) == sha
