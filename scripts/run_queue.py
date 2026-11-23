@@ -125,18 +125,47 @@ def git_head(workdir):
         return ""
 
 
-def integrity_problem(row, workdir):
-    """Return a reason string if the job differs from what its owner signed, else an empty string."""
+def frozen_config_problem(path):
+    """A config under configs/frozen/ written by a selection step after signing must verify itself."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from src.evaluation.frozen import verify_frozen
+        verify_frozen(path)
+        return ""
+    except Exception as exc:  # noqa: BLE001 - reported as the refusal reason
+        return str(exc)
+
+
+def integrity_problem(row, workdir, test_mode=False):
+    """Return a reason string if the job differs from what its owner signed, else an empty string.
+
+    Fail closed: outside --test-mode a job needs a signed git commit that matches a readable HEAD, and a
+    signed config hash. Only a config under configs/frozen/ that a selection step (SEL-*) writes after the
+    row was signed may be unsigned, and it must then pass its own freeze_record verification.
+    """
+    cfg = Path(workdir) / row["config_path"] if row["config_path"] else None
     if row["config_sha256"]:
-        cfg = Path(workdir) / row["config_path"]
-        if not cfg.exists():
+        if not cfg or not cfg.exists():
             return f"config not found: {row['config_path']}"
         if sha256_of(cfg) != row["config_sha256"]:
             return "config changed after READY_FOR_GPU (sha256 mismatch)"
+    elif not test_mode and not row["experiment_id"].startswith("SEL-"):
+        if not cfg or cfg.parent.name != "frozen":
+            return "unsigned config: config_sha256 is empty (only selection-produced configs/frozen/ files may be)"
+        if not cfg.exists():
+            return f"frozen config not produced yet: {row['config_path']}"
+        why = frozen_config_problem(cfg)
+        if why:
+            return f"frozen config does not verify: {why}"
     if row["git_commit"]:
         head = git_head(workdir)
-        if head and not head.startswith(row["git_commit"]):
+        # Why: an unreadable HEAD (no git, not a clone) must not silently pass a signed commit check.
+        if not head:
+            return "cannot verify the code commit (git rev-parse HEAD failed); refusing a commit-signed job"
+        if not head.startswith(row["git_commit"]):
             return f"code commit {head[:10]} differs from signed commit {row['git_commit']}"
+    elif not test_mode:
+        return "unsigned job: git_commit is empty (READY_FOR_GPU needs a signed commit; --test-mode is for unit tests only)"
     return ""
 
 
@@ -151,7 +180,7 @@ def run_hook(cmd, workdir, log):
 def run_job(row, args, log_dir):
     qid = row["queue_id"]
     base = {"queue_id": qid, "lane": row["lane"], "host": socket.gethostname(), "launch_command": row["launch_command"]}
-    problem = integrity_problem(row, args.workdir)
+    problem = integrity_problem(row, args.workdir, args.test_mode)
     if problem:
         write_status(args.status_dir, qid, {**base, "status": "FAILED", "reason": problem, "end_time": now_iso(), "attempts": 0})
         print(f"[{now_iso()}] {qid} refused: {problem}", flush=True)
@@ -224,6 +253,8 @@ def main(argv=None):
     ap.add_argument("--sync-pull", default="", help="command run before each pick, e.g. an rclone copy")
     ap.add_argument("--sync-push", default="", help="command run after each job")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--test-mode", action="store_true",
+                    help="unit tests / dummy jobs only: allow rows without a signed commit or config hash")
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--merge", action="store_true")
     args = ap.parse_args(argv)
