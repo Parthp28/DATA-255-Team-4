@@ -30,6 +30,7 @@ from src.training.datasets import (  # noqa: E402
 )
 from src.training.trainer import Trainer  # noqa: E402
 from src import tracking  # noqa: E402
+from src.evaluation.frozen import frozen_config_info  # noqa: E402
 
 
 def build_model(cfg: ExperimentConfig, pretrained: bool):
@@ -56,6 +57,10 @@ def main():
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
     device = torch.device(args.device)
+    # Plan 14.4: no test-split number from a config that is not a verified frozen config
+    # (configs/frozen/, scripts/freeze_config.py). Tuning / lambda / dev runs predict validation only.
+    frozen_info = frozen_config_info(args.config)
+    pred_splits = ("val", "test") if frozen_info else ("val",)
 
     windows = pd.read_parquet(os.path.join(args.data_root, "windows.parquet"))
     shard_root = os.path.join(args.data_root, "shards")
@@ -77,7 +82,7 @@ def main():
         trainer.load_checkpoint(ckpt_path)
         preds = pd.concat([
             trainer.predict(NumericWindowDataset(windows, ohlcv, s), run_id, s, ckpt_path)
-            for s in ("val", "test")], ignore_index=True)
+            for s in pred_splits], ignore_index=True)
         validate_prediction_frame(preds, image_model=False)
     else:
         reg = pd.read_parquet(os.path.join(args.data_root, "render_registry.parquet"))
@@ -93,7 +98,7 @@ def main():
                           checkpoint_path=ckpt_path, max_steps=args.max_steps)
         trainer.load_checkpoint(ckpt_path)
         preds_list, expected = [], []
-        for s in ("val", "test"):
+        for s in pred_splits:
             full = ChartImageDataset(reg, shard_root, s, RENDER_IDS, cfg.image_size)
             preds_list.append(trainer.predict(full, run_id, s, ckpt_path))
             expected += full.pairs()
@@ -111,7 +116,11 @@ def main():
                "checkpoint_path": ckpt_path, "technical_owner": "kaushik",
                "gpu_minutes": round(minutes, 3), "gpu_model": str(device)}
     record = tracking.write_run_json(os.path.dirname(ckpt_path), run_id, cfg,
-                                     "complete", metrics, {"wall_minutes": round(minutes, 3)})
+                                     "complete", metrics, {"wall_minutes": round(minutes, 3)},
+                                     extra={"prediction_splits": list(pred_splits),
+                                            "validation_status": "pending",   # owner signs via validate_run.py
+                                            "max_steps": args.max_steps,      # set => debug run, never reported
+                                            **(frozen_info or {})})
     tracking.append_index_csv(os.path.join(args.out, "runs", "index.csv"), record)
     print(f"[{run_id}] done | val_macroF1={res.best_val_f1:.3f} | "
           f"rows={len(preds)} | pred={pred_path}")
