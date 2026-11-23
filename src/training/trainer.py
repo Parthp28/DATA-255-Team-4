@@ -88,7 +88,11 @@ class Trainer:
         if self.cfg.pairing == "pair_distinct":
             a = _model_input(batch, "image_a", self.device)
             b = _model_input(batch, "image_b", self.device)
-            logits_a, logits_b = self.model(a), self.model(b)
+            # One forward over all 2 x 64 = 128 images (plan 5.1: same images per step as E1/E2), so
+            # BatchNorm sees the same 128-image batch statistics and one running-stat update per step
+            # as E1. Two separate 64-image forwards would change both for ResNet (LayerNorm DeiT is
+            # unaffected either way).
+            logits_a, logits_b = self.model(torch.cat([a, b], dim=0)).split([a.shape[0], b.shape[0]], dim=0)
             return self.loss_fn(self.cfg.loss, self.cfg.consistency_lambda,
                                 logits_a, labels, logits_b)
         x = _model_input(batch, self.input_key, self.device)
