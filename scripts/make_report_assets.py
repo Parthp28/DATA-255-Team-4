@@ -14,7 +14,7 @@ writes only outside report/ and stamps every table and figure "SYNTHETIC - NOT R
 
 Written: tables/table1_main.tex, table2_per_render.tex, table3_masking.tex (+ table3b_link.tex),
 table4_seeds.tex, table5_comparisons.tex, table7_calibration.tex; figures/fig1_renderings.pdf,
-fig3_flip_by_render.pdf, fig4_tradeoff.pdf, fig7_masking.pdf; manifest.json.
+fig3_flip_by_render.pdf, fig4_tradeoff.pdf, fig6_attribution.pdf, fig7_masking.pdf; manifest.json.
 """
 from __future__ import annotations
 
@@ -49,6 +49,11 @@ SERIES = ["#2a78d6", "#eb6834", "#1baf7a"]
 INK, INK2, MUTED, GRID, AXIS = "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
 CONTROL = "#c3c2b7"
 STAMP = "SYNTHETIC - NOT RESULTS"
+# Every asset this generator can write (report/main.tex references each one; tests/test_report_skeleton.py checks).
+ASSETS = ("tables/table1_main.tex", "tables/table2_per_render.tex", "tables/table3_masking.tex",
+          "tables/table3b_link.tex", "tables/table4_seeds.tex", "tables/table5_comparisons.tex",
+          "tables/table7_calibration.tex", "figures/fig1_renderings.pdf", "figures/fig3_flip_by_render.pdf",
+          "figures/fig4_tradeoff.pdf", "figures/fig6_attribution.pdf", "figures/fig7_masking.pdf")
 
 
 class AssetRefused(RuntimeError):
@@ -333,6 +338,29 @@ def fig7(w, summary):
     w.figure("fig7_masking.pdf", fig)
 
 
+def fig6(w, attribution):
+    """Attribution mass ratio by region on R0: Grad-CAM panel (ResNet-18 runs), rollout panel (DeiT-S runs)."""
+    a = attribution[attribution["render_id"] == "R0"].copy()
+    a["experiment_id"] = a["run_id"].str.split("_s").str[0]
+    regions = ["candles", "volume", "grid", "plot_background", "margins"]
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.5), sharey=True)
+    x = np.arange(len(regions))
+    for ax, (arch, exps), method in zip(axes, ARCH.items(), ("Grad-CAM", "rollout")):
+        style_axes(ax)
+        for k, e in enumerate(exps):
+            d = a[a["experiment_id"] == e].groupby("region")["mass_ratio"].mean().reindex(regions)
+            if d.isna().all():
+                continue
+            ax.bar(x + (k - 1) * 0.26, d, 0.26, color=SERIES[REGIME[e]], edgecolor="white", linewidth=1.0,
+                   label=REGIME_LEGEND[REGIME[e]], zorder=2)
+        ax.axhline(1.0, color=MUTED, linewidth=0.8, linestyle="--", zorder=1)
+        ax.set_xticks(x, [r.replace("plot_background", "plot bg") for r in regions], fontsize=7)
+        ax.set_title(f"{arch} ({method})", fontsize=9, color=INK, loc="left")
+    axes[0].set_ylabel("Mass share / area share", fontsize=8, color=INK2)
+    shared_legend(fig, axes[0])
+    w.figure("fig6_attribution.pdf", fig)
+
+
 def fig1(w, data_root):
     from PIL import Image
     reg = pd.read_parquet(Path(data_root) / "render_registry.parquet")
@@ -378,10 +406,15 @@ def generate(eval_dir, out, masking_dir=None, attribution_dir=None, freeze=None,
     if summary is not None and len(summary):
         table3(w, summary)
         fig7(w, summary)
-    if attribution_dir and freeze:
-        link = attribution_link(attribution_dir, freeze, sources)
-        if link is not None and len(link):
-            table3b(w, link)
+    if attribution_dir:
+        files = sorted(Path(attribution_dir).glob("*.parquet"))
+        if files:
+            sources.update({f"attribution/{p.name}": sha(p) for p in files})
+            fig6(w, pd.concat([pd.read_parquet(p) for p in files], ignore_index=True))
+        if freeze:
+            link = attribution_link(attribution_dir, freeze, sources)
+            if link is not None and len(link):
+                table3b(w, link)
     if data_root:
         fig1(w, data_root)
     manifest = {"synthetic": synthetic, "sources": sources, "written": sorted(w.written)}

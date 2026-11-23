@@ -48,6 +48,19 @@ def fake_masking(tmp):
     return d
 
 
+def fake_attribution(tmp):
+    from src.interpretability.regions import REGIONS
+    d = tmp / "attribution"
+    d.mkdir()
+    for e in mra.IMAGE_EXPS:
+        method = "rollout" if e in ("E2", "E4b", "E4") else "gradcam"
+        rows = [{"run_id": f"{e}_s0_00000000", "window_id": f"w{i}", "render_id": "R0", "method": method,
+                 "region": g, "attribution_mass": 1 / len(REGIONS), "area_frac": 0.1, "mass_ratio": 10 / len(REGIONS)}
+                for i in range(5) for g in REGIONS]
+        pd.DataFrame(rows).to_parquet(d / f"{e}_s0_00000000.parquet", index=False)
+    return d
+
+
 def check_latex(path: Path):
     t = path.read_text()
     assert t.count("\\begin{") == t.count("\\end{")
@@ -69,7 +82,9 @@ def test_synthetic_outputs_are_refused_without_the_flag_and_never_land_in_report
 
 
 def test_synthetic_preview_is_stamped_everywhere(synthetic_eval, tmp_path):
-    man = mra.generate(synthetic_eval, tmp_path / "out", masking_dir=fake_masking(tmp_path), allow_synthetic=True)
+    man = mra.generate(synthetic_eval, tmp_path / "out", masking_dir=fake_masking(tmp_path),
+                       attribution_dir=fake_attribution(tmp_path), allow_synthetic=True)
+    assert "figures/fig6_attribution.pdf" in man["written"] and "attribution/E1_s0_00000000.parquet" in man["sources"]
     assert man["synthetic"] is True
     assert {"tables/table1_main.tex", "tables/table2_per_render.tex", "tables/table3_masking.tex",
             "tables/table4_seeds.tex", "tables/table5_comparisons.tex", "tables/table7_calibration.tex",
