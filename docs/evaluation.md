@@ -56,15 +56,39 @@ tuning, λ candidates, and anything in `experiments/`, produces validation predi
 makes training fail.
 
 ```bash
-# D11 (E1, E2, E5): freeze the selected seed-0 tuning run
-python scripts/freeze_config.py --from-run outputs/runs/<run_id> --rule "D11: highest validation Macro F1" --out configs/frozen/E1.yaml
-# D13 (E3, E4): freeze the λ run chosen by scripts/select_lambda.py
-python scripts/freeze_config.py --from-run outputs/runs/<run_id> --rule "D13: select_lambda.py log" --out configs/frozen/E3.yaml
-# E3b / E4b: the experiment YAML with the frozen parent's lr and weight decay
-python scripts/freeze_config.py --config experiments/E3b.yaml --set lr=<E1 lr> weight_decay=<E1 wd> --rule "inherits configs/frozen/E1.yaml" --out configs/frozen/E3b.yaml
+# D11 (E1, E2, E5): tuning candidates, then the selection step (validation Macro F1 only)
+python scripts/train.py --config experiments/E1.yaml --set lr=1e-4 weight_decay=0.01 --data-root data/render_v1   # x 4
+python scripts/select_config.py --experiment E1 --runs-dir outputs/runs --out configs/frozen/E1.yaml
+# D13 (E3, E4): λ candidates inherit the frozen E1 / E2 lr and weight decay; scripts/select_lambda.py picks λ
+python scripts/train.py --config experiments/E3.yaml --inherit configs/frozen/E1.yaml --set consistency_lambda=0.3 ...
+python scripts/freeze_config.py --from-run outputs/runs/<selected run_id> --rule "D13: select_lambda.py log" --out configs/frozen/E3.yaml
+# E3b / E4b: no selection of their own
+python scripts/freeze_config.py --config experiments/E3b.yaml --inherit configs/frozen/E1.yaml --rule "inherits E1" --out configs/frozen/E3b.yaml
+# seed-0 promotion (plan 4): test predictions for the selected run from its own best.pt
+python scripts/predict.py --frozen configs/frozen/E1.yaml --data-root data/render_v1
+# seeds 1 and 2 run directly from the frozen config (val + test predictions)
+python scripts/train.py --config configs/frozen/E1.yaml --seed 1 --data-root data/render_v1
 ```
 
-Frozen files are immutable. Re-freezing with different content is refused.
+Frozen files are immutable. Re-freezing with different content is refused. A frozen config accepts only `--seed`.
+Promotion requires that the run trained the same scientific configuration as the frozen file: every field except the
+seed, the `phase` label, and the `frozen` flag (`freeze_record.science_sha256`). It also refuses `--max-steps` debug
+runs. After promotion, `validation_status` returns to `pending`, so the owner re-validates.
+
+At the results freeze (G6), `scripts/freeze_results.py --check-complete`, then `--write`, writes
+`outputs/results_freeze.json`. It accepts exactly one run per experiment and seed. Each run must be RESULT_VALIDATED,
+trained from the verified frozen config, carry test predictions whose hash matches the validated one, and meet these
+conditions:
+- clean git tree;
+- full data;
+- not synthetic;
+- pretrained backbone for the image models;
+- an NVIDIA T4 GPU (D16).
+
+`scripts/evaluate.py --runs-from outputs/results_freeze.json` re-verifies every hash.
+
+E5's weight decay is not set by the plan, which lists only lr for E5's D11 grid. `experiments/E5.yaml` leaves it
+`null`, and `train.py` refuses E5 until the owner records a value.
 
 D13 is read as written in `select_lambda.py`: a candidate is eligible when its validation Macro F1 is at least the
 matching E3b/E4b validation Macro F1 minus 0.01, one-sided.
