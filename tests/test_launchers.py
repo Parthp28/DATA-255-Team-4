@@ -1,6 +1,7 @@
 """GPU session launchers (review: Kaushik): the D16 T4 pre-flight, the session script's argument handling and its
 stop before any data step when no T4 is visible, and the two one-cell notebooks. Nothing is launched; no GPU."""
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -55,4 +56,5 @@ def test_notebooks_are_one_launch_cell_with_no_logistics(name):
     src = "".join(code[0]["source"])
     assert "scripts/gpu_session.sh" in src and "CHECK_ONLY = True" in src
     text = json.dumps(nb).lower().replace(REPO_URL.lower(), "")      # the repository address is not logistics
-    assert not any(n in text for n in MEMBER_NAMES) and "5090" not in text and "rtx" not in text
+    assert not any(n in text for n in MEMBER_NAMES)
+    assert not re.search(r"geforce|rtx|a100|v100|h100", text), "the launchers name no GPU model besides the T4"
