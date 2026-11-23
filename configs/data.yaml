@@ -1,0 +1,41 @@
+# Production dataset spec (data_v1). Frozen decisions D1-D6, Execution Plan Section 5.4 / 10.1.
+# Owner: Farzaan. Changing anything here requires a new data_version.
+data_version: data_v1
+
+source:
+  provider: yfinance          # D2: daily adjusted OHLCV
+  auto_adjust: true
+  start: "2005-01-03"         # first trading day kept
+  end: "2024-12-31"           # last trading day kept (inclusive)
+
+# D1: 40 sector-diverse large caps listed since 2005 + 10 ETFs
+tickers:
+  stock: [AAPL, MSFT, AMZN, GOOGL, NVDA, INTC, CSCO, ORCL, IBM, QCOM, TXN,
+          JPM, BAC, WFC, C, GS, JNJ, PFE, MRK, UNH, ABT, XOM, CVX, COP,
+          PG, KO, PEP, WMT, HD, MCD, NKE, DIS, CAT, BA, GE, MMM, HON, UPS, T, VZ]
+  etf: [SPY, QQQ, IWM, DIA, XLF, XLK, XLE, XLV, XLI, XLP]
+
+window:
+  input_len: 30               # L: input days [d-29, d]
+  horizon: 5                  # H: label days [d+1, d+5]
+  stride: 5                   # D6: applied after split assignment, in every split
+
+# D3: chronological split by anchor date, global calendar boundaries for all tickers
+splits:
+  train: ["2005-01-03", "2016-12-31"]
+  val:   ["2017-01-01", "2019-12-31"]
+  test:  ["2020-01-01", "2024-12-31"]
+
+# D4: strict purge/embargo. No trading day is shared by a training span and an
+# evaluation span: train anchors d <= B-6, eval anchors d >= B+29 (B = first eval day).
+purge:
+  rule: strict_no_shared_day
+
+# D5: z = r / (sigma_30 * sqrt(H)); r = Close[d+H]/Close[d] - 1;
+# sigma_30 = sample SD of the 29 log returns inside the 30-row input window.
+labels:
+  classes: [DOWN, NEUTRAL, UP]
+  thresholds_from: train      # tertiles of z on training windows only
+
+# A trading day enters the global calendar when at least this share of tickers traded.
+calendar_min_ticker_share: 0.5
