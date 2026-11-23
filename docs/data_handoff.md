@@ -1,6 +1,6 @@
 # data_v1 / render_v1 handoff (G1, G2)
 
-Owner: Farzaan. Consumers: Kaushik (trainer, ResNet, E5 loader), Khushi (DeiT, lane H), Parth (evaluation, lane P).
+Owner: Farzaan. Consumers: Kaushik (trainer, ResNet, E5 loader), Khushi (DeiT), Parth (evaluation).
 Large files never enter Git; they live on the shared Drive folder `DATA255_shared/data/` (D20).
 
 ## What exists
