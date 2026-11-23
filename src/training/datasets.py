@@ -99,9 +99,21 @@ class PairedChartDataset(Dataset):
         }
 
 
+def numeric_input(window: np.ndarray) -> np.ndarray:
+    """E5 input exactly as Execution Plan 5.1: "prices divided by Close[d] minus 1, volume divided by
+    window mean then log1p; window-only scaling". window: (30, 5) O,H,L,C,V with the anchor d last.
+    Returns (5, 30) float32. No statistic outside the window is used (no global fit, no later rows)."""
+    w = np.asarray(window, dtype=np.float64)
+    out = np.empty_like(w)
+    out[:, :4] = w[:, :4] / w[-1, 3] - 1.0                 # O, H, L, C relative to Close[d]
+    vmean = w[:, 4].mean()
+    out[:, 4] = np.log1p(w[:, 4] / vmean) if vmean > 0 else 0.0
+    return out.T.astype(np.float32)
+
+
 class NumericWindowDataset(Dataset):
-    """Raw OHLCV windows for E5. Per-window, per-channel min-max scaling (D-leakage
-    rule: no global statistic is fit). Returns (5, 30) tensors."""
+    """Raw OHLCV windows for E5, scaled per window by numeric_input() (plan 5.1; no global
+    statistic is fit). Returns (5, 30) tensors."""
 
     def __init__(self, windows: pd.DataFrame, ohlcv: np.ndarray, split: str):
         self.rows = windows[windows["split"] == split].reset_index(drop=True)
@@ -112,11 +124,7 @@ class NumericWindowDataset(Dataset):
 
     def __getitem__(self, i: int) -> dict:
         r = self.rows.iloc[i]
-        win = self.ohlcv[int(r["row_idx"])].astype(np.float32)   # (30, 5)
-        lo = win.min(axis=0, keepdims=True)
-        hi = win.max(axis=0, keepdims=True)
-        win = (win - lo) / np.clip(hi - lo, 1e-8, None)          # per-channel min-max
-        seq = torch.from_numpy(win.transpose(1, 0)).contiguous()  # (5, 30)
+        seq = torch.from_numpy(numeric_input(self.ohlcv[int(r["row_idx"])])).contiguous()  # (5, 30)
         return {
             "seq": seq, "label": int(r["label"]),
             "window_id": r["window_id"], "render_id": NUMERIC_RENDER_ID,
