@@ -28,7 +28,7 @@ changes which windows share a batch, not which renderings a window shows. Across
 pairs of {R0, R1, R2, R4} are drawn with equal probability.
 
 The plan asks for two distinct seen renderings per window per step and does not ask for per-epoch resampling. The
-fixed pairing is deterministic, needs no extra state in `last.pt`, and is identical for E3b/E3 and E4b/E4, so the
+fixed pairing is deterministic, needs no extra state in `last.pt`, and at the same seed is identical for E3b/E3 and E4b/E4, so the
 lambda = 0 controls and the consistency runs see the same image pairs. Per-epoch resampling (a key of
 `(seed, epoch, i)`) would show each window in more renderings. Adopting it is a recipe change, would need the epoch
 passed into the dataset, and must be decided before any paired run. The current code keeps the fixed pairing.
