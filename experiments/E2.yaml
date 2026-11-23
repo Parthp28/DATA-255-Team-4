@@ -1,0 +1,23 @@
+# E2 -- DeiT-S/16 Transformer predictive + robustness baseline (single rendering R0).
+# Development/tuning config (owner: Khushi). D11 grid on validation, seed 0: lr {5e-5, 1e-4} x wd {0.01, 0.05}
+# via scripts/train.py --set; the selected run is frozen into configs/frozen/E2.yaml by scripts/freeze_config.py.
+experiment_id: E2
+model: deit_small_patch16_224.fb_in1k
+seed: 0
+phase: dev
+data_version: data_v1
+render_version: render_v1
+train_renders: [R0]
+pairing: none
+loss: ce
+consistency_lambda: 0.0
+lr: 1.0e-4
+weight_decay: 0.05
+images_per_step: 128
+epochs_max: 10
+patience: 3
+early_stop_metric: val_macro_f1_own_renders
+amp: true
+grad_clip: 1.0
+image_size: 224
+frozen: false

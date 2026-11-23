@@ -25,9 +25,12 @@ def make_queue(tmp, rows):
     return path
 
 
-def run_lane(tmp, queue, lane="P", **extra):
+def run_lane(tmp, queue, lane="P", test_mode=True, **extra):
+    # Dummy rows are unsigned; the runner fails closed on unsigned rows unless --test-mode is explicit.
     argv = ["--lane", lane, "--queue", str(queue), "--status-dir", str(tmp / "status"), "--log-dir", str(tmp / "logs"),
             "--workdir", str(tmp), "--poll", "0.05", "--heartbeat", "0.05", "--max-idle", "0.3"]
+    if test_mode:
+        argv.append("--test-mode")
     for k, v in extra.items():
         argv += [f"--{k.replace('_', '-')}", str(v)]
     return rq.main(argv)

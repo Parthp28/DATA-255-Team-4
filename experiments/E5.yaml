@@ -1,0 +1,24 @@
+# E5 -- numeric 1D CNN on the 30 x 5 OHLCV window (representation control A6; owner: Farzaan; runs on CPU).
+# D11: lr {1e-3, 3e-3} on validation, seed 0 (--set lr=...). Input scaling: plan 5.1 (src/training/datasets.py).
+# OPEN PRE-E5 DECISION: the plan does not specify E5 weight decay. It is left null on purpose; scripts/train.py
+# refuses to run E5 until the owner records a value here (and it is frozen with the E5 selection).
+experiment_id: E5
+model: numeric1d
+seed: 0
+phase: dev
+data_version: data_v1
+render_version: render_v1
+train_renders: [NUM]
+pairing: none
+loss: ce
+consistency_lambda: 0.0
+lr: 1.0e-3
+weight_decay: null
+images_per_step: 128
+epochs_max: 10
+patience: 3
+early_stop_metric: val_macro_f1_own_renders
+amp: true
+grad_clip: 1.0
+image_size: 224
+frozen: false

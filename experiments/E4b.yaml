@@ -1,0 +1,22 @@
+# E4b -- DeiT-S/16 paired on seen styles, lambda = 0 (augmentation-only CONTROL for E4; owner: Khushi).
+# No tuning of its own: run with --inherit configs/frozen/E2.yaml (lr, weight decay); lr/wd below are placeholders.
+experiment_id: E4b
+model: deit_small_patch16_224.fb_in1k
+seed: 0
+phase: dev
+data_version: data_v1
+render_version: render_v1
+train_renders: [R0, R1, R2, R4]
+pairing: pair_distinct
+loss: paired_ce
+consistency_lambda: 0.0
+lr: 1.0e-4
+weight_decay: 0.05
+images_per_step: 128
+epochs_max: 10
+patience: 3
+early_stop_metric: val_macro_f1_own_renders
+amp: true
+grad_clip: 1.0
+image_size: 224
+frozen: false

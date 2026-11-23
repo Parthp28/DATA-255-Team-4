@@ -7,7 +7,7 @@
     python scripts/freeze_config.py --from-run outputs/runs/E3_s0_c5aa882d --rule "D13 (select_lambda.py log)" \
         --out configs/frozen/E3.yaml
     # E3b / E4b (no selection of their own): the experiment YAML with the frozen E1 / E2 lr and weight decay
-    python scripts/freeze_config.py --config experiments/E3b.yaml --set lr=1e-4 weight_decay=0.05 \
+    python scripts/freeze_config.py --config experiments/E3b.yaml --inherit configs/frozen/E1.yaml \
         --rule "inherits configs/frozen/E1.yaml" --out configs/frozen/E3b.yaml
 
 Only a verified frozen config makes scripts/train.py produce test-split predictions. Selection itself is
@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT))
 import yaml  # noqa: E402
 
 from src.common.config import ExperimentConfig  # noqa: E402
-from src.evaluation.frozen import build_frozen, write_frozen  # noqa: E402
+from src.evaluation.frozen import build_frozen, verify_frozen, write_frozen  # noqa: E402
 
 TUNABLE = ("lr", "weight_decay", "consistency_lambda")
 
@@ -51,6 +51,7 @@ def main(argv=None):
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--from-run", help="outputs/runs/<run_id> of the selected seed-0 run")
     src.add_argument("--config", help="experiment YAML (E3b/E4b, which have no selection of their own)")
+    ap.add_argument("--inherit", help="verified frozen parent (E3b/E3 <- configs/frozen/E1.yaml, E4b/E4 <- E2.yaml)")
     ap.add_argument("--set", nargs="+", default=[], metavar="KEY=VALUE", help=f"only {TUNABLE}")
     ap.add_argument("--rule", required=True, help="selection rule or provenance note recorded in freeze_record")
     ap.add_argument("--out", required=True, help="configs/frozen/<experiment>.yaml")
@@ -59,6 +60,11 @@ def main(argv=None):
         cfg, prov = config_from_run(Path(a.from_run))
     else:
         cfg, prov = ExperimentConfig.from_yaml(a.config), {"source_config": a.config.replace("\\", "/")}
+    if a.inherit:
+        rec = verify_frozen(a.inherit)
+        parent = ExperimentConfig.from_yaml(a.inherit)
+        cfg = dataclasses.replace(cfg, lr=parent.lr, weight_decay=parent.weight_decay)
+        prov.update(inherit_path=a.inherit.replace("\\", "/"), inherit_config_sha256=rec["config_sha256"])
     for item in a.set:
         k, _, v = item.partition("=")
         if k not in TUNABLE:

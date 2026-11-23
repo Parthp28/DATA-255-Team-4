@@ -44,7 +44,7 @@ def make_run(root, cfg: ExperimentConfig, splits=("val",), extra=None):
            "status": "complete", "wall_minutes": 1.0, "best_val_f1": 0.41, "best_epoch": 2, "epochs_run": 5,
            "prediction_paths": [str(pred)], "checkpoint_path": "best.pt", "technical_owner": "kaushik",
            "gpu_minutes": 1.0, "gpu_model": "cuda", "prediction_splits": list(splits),
-           "validation_status": "pending", "max_steps": None, **(extra or {})}
+           "validation_status": "pending", "max_steps": None, "pretrained": True, **(extra or {})}
     run_dir = root / "runs" / rid
     run_dir.mkdir(parents=True)
     (run_dir / "run.json").write_text(json.dumps(rec))
@@ -96,6 +96,7 @@ def test_changed_rejected_or_superseded_results_are_refused(tmp_path):
 
 @pytest.mark.parametrize("extra,failed", [({"max_steps": 2}, "full_data_no_step_cap"),
                                           ({"git_dirty": True}, "clean_git_tree"),
+                                          ({"pretrained": False}, "pretrained_backbone"),
                                           ({"gpu_executor": "someone"}, "no_logistics_fields"),
                                           ({"lane": "P"}, "no_logistics_fields")])
 def test_validation_refuses_debug_dirty_and_logistics(tmp_path, extra, failed):
@@ -172,7 +173,10 @@ def test_freeze_from_selected_run(tmp_path):
     rec = verify_frozen(out)
     assert rec["source_run_id"] == r["rid"] and rec["selected_hyperparameters"]["lr"] == 1e-4
     run = json.loads((r["run_dir"] / "run.json").read_text())
-    assert run_matches_frozen({**run, "frozen": True, "phase": "final", "frozen_config_sha256": rec["config_sha256"]})
+    info = frozen_config_info(out)
+    assert run["phase"] == "dev" and run["frozen"] is False
+    assert run_matches_frozen({**run, **info})                     # the selected tuning run itself is promotable
+    assert not run_matches_frozen({**run, **info, "lr": 3e-4})     # a different configuration is not
     r2 = make_run(tmp_path / "s1", dataclasses.replace(e1(), seed=1))
     with pytest.raises(SystemExit, match="seed-0"):
         freeze_config.main(["--from-run", str(r2["run_dir"]), "--rule", "D11", "--out", str(tmp_path / "frozen" / "X.yaml")])
