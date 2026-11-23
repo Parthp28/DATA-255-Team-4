@@ -12,8 +12,8 @@ also run on a T4, never on another GPU.
 
 The manifest records scientific provenance only (run ids, prediction hashes, frozen-config hashes, commit,
 data and render versions, technical owner, GPU model); never who ran a job. scripts/evaluate.py
---runs-from reads it and re-verifies every prediction hash. B0 baselines join with --include-b0 once they
-have run records.
+--runs-from reads it and re-verifies every prediction hash. --include-b0 adds the B0 baselines with the plan's
+seeds (majority and momentum seed 0, stratified random seeds 0-2), under the same checks.
 """
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.common.schema import sha256_file  # noqa: E402
 from src.evaluation.frozen import FrozenConfigError, run_matches_frozen, verify_frozen  # noqa: E402
+from src.baselines import B0_SEEDS  # noqa: E402
 from src.evaluation.gate import has_image_backbone, logistics_fields  # noqa: E402
 
 FINAL_EXPERIMENTS = ("E1", "E2", "E3b", "E4b", "E3", "E4", "E5")
@@ -85,7 +86,7 @@ def build_manifest(runs_dir, frozen_dir, experiments=FINAL_EXPERIMENTS, test_mod
         if frec.get("test_mode") and not test_mode:
             missing.append(f"{exp}: frozen in test mode")
             continue
-        for seed in SEEDS:
+        for seed in B0_SEEDS.get(exp, SEEDS):
             cands = [r for r in recs if r.get("experiment_id") == exp and int(r.get("seed", -1)) == seed
                      and r.get("status") != "superseded" and r.get("validation_status") not in ("rejected", "superseded")]
             why = {r["run_id"]: problems(r, fpath, frec["config_sha256"], test_mode) for r in cands}
@@ -121,13 +122,15 @@ def main(argv=None):
     ap.add_argument("--experiments", nargs="+", default=list(FINAL_EXPERIMENTS))
     ap.add_argument("--check-complete", action="store_true", help="report only; write nothing")
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--include-b0", action="store_true", help="also require the B0 baselines (plan seeds)")
     ap.add_argument("--test-mode", action="store_true", help="unit tests only: synthetic data, any device")
     a = ap.parse_args(argv)
-    entries, missing = build_manifest(a.runs_dir, a.frozen_dir, a.experiments, a.test_mode)
+    experiments = list(a.experiments) + ([e for e in B0_SEEDS if e not in a.experiments] if a.include_b0 else [])
+    entries, missing = build_manifest(a.runs_dir, a.frozen_dir, experiments, a.test_mode)
     if missing:
         print("NOT COMPLETE:\n  " + "\n  ".join(missing))
         return 1
-    print(f"complete: {len(entries)} runs ({len(a.experiments)} experiments x {len(SEEDS)} seeds)")
+    print(f"complete: {len(entries)} runs ({len(experiments)} experiments)")
     if a.write and not a.check_complete:
         man = {"schema": "results_freeze_v1", "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                "git_commit": _git_commit(), "required_gpu": D16_GPU, "test_mode": bool(a.test_mode),
