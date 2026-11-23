@@ -1,0 +1,22 @@
+# E3b -- ResNet-18 paired on seen styles, lambda = 0 (augmentation-only CONTROL).
+# Same images per step as E3 so any E3 gain is the consistency term, not data volume.
+experiment_id: E3b
+model: resnet18.a1_in1k
+seed: 0
+phase: dev
+data_version: data_v1
+render_version: render_v1
+train_renders: [R0, R1, R2, R4]
+pairing: pair_distinct
+loss: paired_ce
+consistency_lambda: 0.0
+lr: 3.0e-4
+weight_decay: 0.05
+images_per_step: 128
+epochs_max: 10
+patience: 3
+early_stop_metric: val_macro_f1_own_renders
+amp: true
+grad_clip: 1.0
+image_size: 224
+frozen: false

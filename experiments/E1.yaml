@@ -1,0 +1,21 @@
+# E1 -- ResNet-18 CNN predictive + robustness baseline (single rendering R0).
+experiment_id: E1
+model: resnet18.a1_in1k
+seed: 0
+phase: dev
+data_version: data_v1
+render_version: render_v1
+train_renders: [R0]
+pairing: none
+loss: ce
+consistency_lambda: 0.0
+lr: 3.0e-4
+weight_decay: 0.05
+images_per_step: 128
+epochs_max: 10
+patience: 3
+early_stop_metric: val_macro_f1_own_renders
+amp: true
+grad_clip: 1.0
+image_size: 224
+frozen: false
