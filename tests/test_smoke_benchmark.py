@@ -1,6 +1,6 @@
 """P00/H00 tooling on CPU with the dummy registry (review: Kaushik for P00 / ResNet, Khushi for H00 / DeiT).
 
-The real P00/H00 run on a T4 lane with pretrained weights and real data after G2; here every check runs
+The real P00/H00 run on a T4 GPU with pretrained weights and real data after G2; here every check runs
 end to end on CPU with --no-pretrained. The numeric E5 model proves the overfit criterion can pass; the
 image models run a few overfit steps so the suite stays fast, and their other checks must pass."""
 import json

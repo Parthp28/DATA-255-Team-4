@@ -1,7 +1,7 @@
 """G3 smoke test for one experiment config (P00: ResNet-18, H00: DeiT-S). Owners: Kaushik (P00), Khushi (H00).
 
-    python scripts/smoke_test.py --config experiments/E1.yaml --data-root data/render_v1      # P00 (lane P)
-    python scripts/smoke_test.py --config experiments/E2.yaml --data-root data/render_v1      # H00 (lane H)
+    python scripts/smoke_test.py --config experiments/E1.yaml --data-root data/render_v1      # P00 (ResNet-18)
+    python scripts/smoke_test.py --config experiments/E2.yaml --data-root data/render_v1      # H00 (DeiT-S)
 
 Gate G3 asks the GPU smoke jobs to pass on real data: one-batch overfit, resume, prediction export (plan
 16.1, T-T5, T-T6). This script runs them through the shared stack (scripts/train.build_model, Trainer,
