@@ -52,6 +52,19 @@ def test_image_smoke_paths_run_end_to_end(dummy, tmp_path, cfg, owner):
     assert rep["pretrained"] is False and rep["amp"] is False
 
 
+def test_smoke_rerun_into_the_same_out_dir_starts_clean(dummy, tmp_path):
+    """Re-running P00/H00 after a failure is routine: the second run must not resume from the first run's
+    last.pt, and a --set change must not be refused as a configuration mismatch."""
+    args = ("--overfit-steps", "2", "--train-windows", "16", "--eval-windows", "4")
+    _, first = smoke("E1.yaml", dummy, tmp_path, *args)
+    _, again = smoke("E1.yaml", dummy, tmp_path, *args)
+    _, changed = smoke("E1.yaml", dummy, tmp_path, *args, "--set", "lr=1e-4")
+    for rep in (first, again, changed):
+        r = rep["checks"]["resume"]
+        assert r["pass"] and r["steps_epoch0"] > 0 and r["steps_resumed"] > 0
+    assert again["checks"]["resume"]["max_abs_loss_diff"] == first["checks"]["resume"]["max_abs_loss_diff"]
+
+
 def test_smoke_refuses_e5_without_a_weight_decay_decision(dummy, tmp_path):
     with pytest.raises(SystemExit, match="open pre-E5"):
         smoke("E5.yaml", dummy, tmp_path)

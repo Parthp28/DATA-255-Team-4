@@ -22,6 +22,7 @@ import dataclasses
 import json
 import math
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -151,6 +152,10 @@ def check_resume(cfg, data, device, pretrained, out):
               resume=resume, stop_after_epochs=stop)
         return t
 
+    # A re-run into the same --out must not resume from the previous smoke's last.pt (that would skip the
+    # interrupted epoch, or be refused after a --set change), so the resume check always starts empty.
+    for d in ("full", "cut"):
+        shutil.rmtree(out / d, ignore_errors=True)
     det = torch.backends.cudnn.deterministic, torch.backends.cudnn.benchmark
     torch.backends.cudnn.deterministic, torch.backends.cudnn.benchmark = True, False
     try:
