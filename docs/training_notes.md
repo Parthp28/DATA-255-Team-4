@@ -49,3 +49,22 @@ linear head. The plan does not mention BatchNorm. There are two options:
 `scripts/freeze_config.py`, and the report describes the model that was actually run.
 
 Owner: Kaushik (model code), Farzaan (E5 runs).
+
+## 4. E5 fits on CPU
+
+Plan 5.1 runs E5 on CPU and moves it to a T4 only if CPU takes more than about 30 minutes in total.
+
+The estimate below used synthetic numeric windows of the production size (29,900 train and 7,200 val), through the
+shared trainer. One epoch took 2.7 s with 4 CPU threads and 6.9 s with 24. The worst case is the 2 D11 tuning runs
+plus seeds 1 and 2, each running the full 10 epochs, which comes to under 5 minutes. This is an engineering estimate
+on synthetic tensors, not a result, so the run records stay the source of truth.
+
+`tests/test_experiment_configs.py` checks every `experiments/*.yaml` against:
+
+- the plan matrix (5.1);
+- the shared recipe D10;
+- the D11 grid;
+- the lambda grid D12/D13;
+- the E3b/E3 <- E1 and E4b/E4 <- E2 inheritance.
+
+It also checks that E5's weight decay is still unset (open decision).
