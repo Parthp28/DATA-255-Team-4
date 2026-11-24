@@ -42,8 +42,8 @@
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-% Owner: Parth. Written last (Nov 23) from Tables 1 and 5. About 200 words.
-\draft{Problem, method (counterfactual renderings, E1 to E5, augmentation and consistency controls), main measured results with metric and baseline, scoped conclusion.}
+% RESULTS-DEPENDENT: written from the frozen tables after the results freeze.
+\draft{Abstract (about 200 words): problem, counterfactual-rendering method, experiments E1 to E5 with augmentation and consistency controls, main measured results with metric and baseline, scoped conclusion.}
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -56,117 +56,198 @@ Financial chart images, shortcut learning, counterfactual rendering, robustness,
 
 % ---------------------------------------------------------------------------
 \section{Introduction}\label{sec:intro}
-% Owner: Parth | Draft Nov 21 | Final Nov 23 | 0.6 pages
-\IEEEPARstart{C}{hart}-image models \draft{Motivation; the risk that models read rendering instead of prices; research questions RQ1 to RQ10; contributions list.}
+\IEEEPARstart{C}{hart}-image models treat a window of daily prices as a picture and ask a vision network to predict what happens next \cite{jiang2023reimagining, sezer2018cnnta}. The picture is a design choice: the same open, high, low, close, and volume numbers can be drawn on a white or tinted background, with or without grid lines, with different candle colours, candle widths, or margins. None of these choices changes the financial information, so a model that has learned price patterns should give the same answer for every rendering of the same window. A model that has learned rendering shortcuts \cite{geirhos2020shortcut} will not.
+
+This project tests that property directly. We draw every window of a leakage-controlled dataset in seven renderings that carry identical financial information (Fig.~\ref{fig:renderings}): a reference (R0) and six single-factor counterfactuals, three of which are shown during training and three of which are held out. We then measure how often a model's prediction changes when only the rendering changes, alongside the usual predictive metrics, for a convolutional network (ResNet-18) and a vision transformer (DeiT-S), with and without multi-rendering training and a paired consistency objective.
+
+Our research questions are: (RQ1) can ResNet-18 and DeiT-S predict a volatility-scaled five-day return class above trivial baselines; (RQ2) do their predictions change when only the rendering changes; (RQ3) which rendering factors cause the largest changes; (RQ4) is one architecture more rendering-stable under the same training recipe; (RQ5) does multi-rendering exposure help; (RQ6) does a consistency loss help beyond exposure to the same images; (RQ7) does robustness cost predictive or calibration quality; (RQ8) do models attend to regions that carry no financial information; and (RQ9) does drawing the chart add value over the raw numbers.
+
+Our contributions are: (i) a counterfactual rendering registry of $49{,}350$ windows in seven information-equivalent renderings with automated equivalence checks; (ii) a paired evaluation that separates the effect of rendering exposure (augmentation-only controls) from the effect of a consistency objective, with identical image pairs in both arms; (iii) a comparison of a CNN and a vision transformer under one fixed training recipe and tuning budget; and (iv) a robustness-aware evaluation that reports flip rates only next to Macro F1 and the predicted-class distribution, with seed variability and block-bootstrap intervals.
 
 % ---------------------------------------------------------------------------
 \section{Related Work}\label{sec:related}
-% Synthesize, do not list. IEEE numeric citations via \cite{}. At least 13 papers in total.
-\subsection{Financial Chart-Image Prediction}   % Owner: Farzaan
-\draft{3.1}
-\subsection{Representation and Rendering Effects} % Owner: Farzaan
-\draft{3.2}
-\subsection{Shortcut Learning and Robustness}   % Owner: Khushi
-\draft{3.3}
-\subsection{CNN versus Transformer Robustness}  % Owner: Kaushik
-\draft{3.4}
-\subsection{Consistency and Invariance Training} % Owner: Khushi
-\draft{3.5}
-\subsection{Interpretability}                   % Owner: Kaushik
-\draft{3.6}
-\subsection{Calibration and Evaluation}         % Owner: Parth
-\draft{3.7}
-\subsection{Research Gap}                       % Owner: Parth
-\draft{3.8: gap, then how our project addresses it.}
+\subsection{Financial Chart-Image Prediction}
+Jiang, Kelly, and Xiu \cite{jiang2023reimagining} train CNNs on black-and-white OHLC images of US stocks and report predictive power for future returns, and they check that their image design choices do not drive the result. Sezer and Ozbayoglu \cite{sezer2018cnnta} convert technical-indicator time series into images for a CNN trading model, and Chen and Tsai \cite{chen2020candlestick} encode candlesticks as images to classify chart patterns. These studies evaluate one rendering per model; the question of whether predictions survive an information-preserving change of rendering is not their focus. Lo, Mamaysky, and Wang \cite{lo2000foundations} formalize visual technical-analysis patterns with nonparametric smoothing, a reminder that what a chart shows is a function of the underlying prices, not of its drawing.
+
+\subsection{Representation and Rendering Effects}
+Vision models can depend strongly on cues that are incidental to the task. ImageNet-trained CNNs rely more on texture than on shape \cite{geirhos2019texture}, and common corruptions and perturbations reduce accuracy far more than they change the image content a human would use \cite{hendrycks2019benchmarking}. Chart renderings are an extreme case: background, grid, palette, candle width, and margins are fully controlled by the analyst, so their effect on a model can be measured with exact counterfactuals rather than natural shifts.
+
+\subsection{Shortcut Learning and Robustness}
+Shortcut learning describes models that solve a benchmark with cues that do not transfer to the intended task \cite{geirhos2020shortcut}. Even small, carefully reproduced test sets can reveal brittle generalization \cite{recht2019imagenet}. We follow this line by holding out three rendering factors from all training and tuning, so that robustness to them cannot be learned directly.
+
+\subsection{CNN versus Transformer Robustness}
+ResNets \cite{he2016resnet} and vision transformers \cite{dosovitskiy2021vit, touvron2021deit} have different inductive biases: local convolutions with batch normalization versus global self-attention over patches with layer normalization. Reports that transformers are more robust \cite{naseer2021intriguing} are tempered by evidence that much of the gap comes from the training recipe \cite{bai2021transformers, wightman2021resnet}. We therefore train both architectures with the same recipe, tuning budget, resolution, and data, and read architecture differences at matched predictive quality.
+
+\subsection{Consistency and Invariance Training}
+Stability training \cite{zheng2016stability} penalizes output changes under small input perturbations, AugMix \cite{hendrycks2020augmix} adds a Jensen-Shannon consistency term across augmented views, and UDA \cite{xie2020uda} enforces consistency on unlabeled data. We adopt a symmetric Jensen-Shannon divergence \cite{lin1991divergence} between two renderings of the same window, and we compare it against a control that sees exactly the same image pairs without the consistency term, so that the effect of the loss is not confounded with the effect of seeing more renderings.
+
+\subsection{Interpretability}
+Occlusion \cite{zeiler2014visualizing}, Grad-CAM \cite{selvaraju2017gradcam}, and attention rollout \cite{abnar2020rollout} localize the evidence a model uses, but saliency maps can be insensitive to the model \cite{adebayo2018sanity} and attention weights are not explanations by themselves \cite{jain2019attention}. We use heatmaps only as supporting evidence and test region importance directly with masking against area-matched random controls.
+
+\subsection{Calibration and Evaluation}
+Modern networks are often miscalibrated \cite{guo2017calibration}; we report expected calibration error \cite{naeini2015ece} and the Brier score \cite{brier1950verification}. Overlapping financial windows require purging and embargo between training and evaluation periods \cite{lopezdeprado2018advances}, and serially correlated test samples require a block bootstrap \cite{kunsch1989jackknife} rather than resampling single windows.
+
+\subsection{Research Gap}
+Prior chart-image work reports predictive accuracy on one rendering, and robustness work rarely uses information-preserving counterfactuals with held-out factors. To our knowledge no study combines (a) exact rendering counterfactuals with seen and held-out factors, (b) paired augmentation-only controls that isolate a consistency objective, (c) a CNN-versus-transformer comparison under one recipe, and (d) a numeric baseline on the identical windows. This project combines all four.
 
 % ---------------------------------------------------------------------------
 \section{Problem Formulation}\label{sec:problem}
-% Owner: Parth | Draft Nov 20 | 0.3 pages
-\draft{Window definition, label definition, the invariance question as a formal statement.}
+A sample is a window $w$ of $L = 30$ consecutive trading days of daily open, high, low, close, and volume for one asset, ending at its anchor day $d$. Its target is the five-day forward return $r = C_{d+H}/C_d - 1$ with $H = 5$, scaled by the window's own volatility, $z = r/(\sigma_{30}\sqrt{H})$, where $\sigma_{30}$ is the sample standard deviation of the 29 log returns inside the input window. The label is DOWN if $z \le t_1$, UP if $z > t_2$, and NEUTRAL otherwise, with $(t_1, t_2)$ the 1/3 and 2/3 quantiles of $z$ over training windows only.
 
+A rendering function $g_r$ maps a window to a $224 \times 224$ RGB image. For a classifier $f$ the invariance question is whether $\arg\max f(g_r(w)) = \arg\max f(g_{R0}(w))$ for every rendering $r$, since every $g_r$ is a deterministic function of the same 30 by 5 array. We measure its violation rate on held-out test windows, never assume it.
+
+% ---------------------------------------------------------------------------
 \section{Dataset and Leakage Control}\label{sec:data}
-% Owner: Farzaan | Draft Nov 21 | 0.7 pages | Sources: split_report.md, leakage test log
-\draft{Universe, source, dates, splits, label thresholds, the 35-day purge and embargo derivation, test evidence that controls passed.}
+\textbf{Universe and source.} Fifty liquid US assets: 40 large-cap stocks across sectors and 10 ETFs (SPY, QQQ, IWM, DIA, and six sector funds), with split- and dividend-adjusted daily OHLCV from 2005-01-03 to 2024-12-31 (5{,}033 trading days per asset). Every raw file is stored with its SHA-256 hash in a manifest.
 
+\textbf{Windows and split.} Windows use $L=30$ input days and $H=5$ label days with a stride of 5 trading days. The split is chronological by anchor date with global calendar boundaries: training 2005--2016, validation from 2017-01-03 to 2019, and test from 2020-01-02 to 2024. The thresholds fitted on training are $t_1 = -0.278$ and $t_2 = 0.520$ and are applied unchanged to validation and test.
+
+\textbf{Purge and embargo.} A training window and an evaluation window must share no trading day of information (input or label). With $L + H = 35$, an evaluation anchor at boundary $B$ uses days from $B-29$, and a training anchor $a$ uses days up to $a+5$, so every anchor from $B-5$ to $B+28$ (34 daily anchors) is purged at each boundary; after the stride this removes 7 windows per asset per boundary, 700 windows in total.
+
+\textbf{Counts and balance.} The registry holds 50{,}050 windows: 29{,}900 training, 7{,}200 validation, 12{,}250 test, and 700 purged. Training classes are balanced by construction (0.333 each); validation is 0.312 / 0.341 / 0.348 and test 0.335 / 0.341 / 0.324 (DOWN / NEUTRAL / UP).
+
+\textbf{Gate G1.} Automated tests and an independent verifier re-derived every property from the artifacts: manifest hashes, the ticker universe, OHLCV hashes for every window, disjoint and chronologically ordered splits, no shared trading day across a boundary, the strict purge counts, thresholds that reproduce from training windows only (and change if validation or test windows are included), labels, and a recomputation of returns, volatility, and window rows from the raw files for 200 windows. All checks passed on the production data.
+
+% ---------------------------------------------------------------------------
 \section{Counterfactual Rendering Method}\label{sec:render}
-% Owner: Farzaan | Draft Nov 22 | 0.6 pages | Figure 1
-\draft{R0 to R6, seen vs held-out, equivalence tests.}
-\begin{figure*}[t]
-\centering
-\IfFileExists{generated/figures/fig1_renderings.pdf}{\includegraphics[width=\textwidth]{fig1_renderings.pdf}}{\draft{Figure 1: one window drawn in R0 to R6}}
-\caption{One OHLCV window drawn in the seven renderings. Financial information is identical; only the named rendering factor changes.}
-\label{fig:renderings}
-\end{figure*}
+Every rendering draws the same 30 candles and 30 volume bars from the same 30 by 5 array with the same per-window scaling: the price panel spans the window's lowest low to highest high, and the volume panel spans zero to the highest volume. Images are $224 \times 224$ RGB with no text, numbers, dates, or tickers. The reference R0 uses 8-pixel margins (a $208 \times 208$ plot), a price panel on the top 75\% and a volume panel on the bottom 20\%, candle bodies 60\% of the slot width with 1-pixel wicks, a light $5 \times 6$ grid, green and red candles, and grey volume bars. Each counterfactual changes exactly one factor (Fig.~\ref{fig:renderings}):
+R1 tints the background (seen);
+R2 removes the grid (seen);
+R4 swaps the candle palette to blue and orange (seen);
+R3 adds plain axes with tick marks and no labels (held out);
+R5 narrows candle bodies to 35\% of the slot (held out);
+R6 widens the margins to 24 pixels, a $176 \times 176$ plot (held out).
+Seen factors may appear in training; held-out factors are never used for training or any selection.
 
+\textbf{Gate G2.} The registry contains exactly seven renderings for each of the 49{,}350 non-purged windows (345{,}450 images, 21 shard archives with SHA-256 checksums). Every PNG decodes to a $224 \times 224$ RGB image whose hash equals the registry hash, a fresh process re-renders identical images, a 200-window pixel check confirms the price-to-pixel mapping, and every rendering of a window shares its OHLCV hash, label, and split. A factor-isolation audit of 1{,}400 production images confirmed that each counterfactual differs from R0 only in its own factor, that all seven renderings show the same 30-candle up/down sequence and volume bars, and that every pixel uses one of the style's own colours, which rules out any text or numerals.
+
+\genfig{fig1_renderings.pdf}{One test window drawn in the seven renderings. The financial information is identical; only the named factor changes. R1, R2, and R4 may be seen in training; R3, R5, and R6 are held out.}{fig:renderings}{Figure 1: one window in R0 to R6}
+
+% ---------------------------------------------------------------------------
 \section{Models}\label{sec:models}
-\subsection{ResNet-18 and the Shared Training Recipe} % Owner: Kaushik
-\draft{7.1}
-\subsection{DeiT-S and the Consistency Loss}        % Owner: Khushi
-\draft{7.2}
+\subsection{ResNet-18 and the Shared Training Recipe}
+ResNet-18 \cite{he2016resnet} (11.7M parameters) is initialized from ImageNet-1k weights trained with a modern recipe (timm \texttt{resnet18.a1\_in1k} \cite{wightman2019timm, wightman2021resnet}) with a new three-class head. Both image models use one recipe (decision D10): AdamW, one linear warm-up epoch followed by cosine decay, at most 10 epochs with early stopping (patience 3) on validation Macro F1 averaged over the experiment's own training renderings, 128 images per step, fp16 mixed precision, gradient clipping at 1.0, ImageNet normalization, and no data augmentation beyond the renderings themselves. The checkpoint with the best validation score is used for all predictions.
+
+\subsection{DeiT-S and the Consistency Loss}
+DeiT-S \cite{touvron2021deit} (22.1M parameters; 12 layers, 384-dimensional tokens, 6 heads) reads $16 \times 16$ patches, 196 tokens plus a class token, and is initialized from ImageNet-1k weights (\texttt{deit\_small\_patch16\_224.fb\_in1k}) with a new three-class head. For paired training each step draws 64 windows, each shown in two distinct seen renderings $x_a$ and $x_b$ (128 images per step, as in the single-rendering runs; both views pass through one forward so that batch statistics match). The paired objective is
 \begin{equation}
-\mathcal{L} = \tfrac{1}{2}\big[\mathrm{CE}(f(x_a), y) + \mathrm{CE}(f(x_b), y)\big] + \lambda\,\mathrm{JS}\big(p_a \,\|\, p_b\big)
+\mathcal{L} = \tfrac{1}{2}\big[\mathrm{CE}(f(x_a), y) + \mathrm{CE}(f(x_b), y)\big] + \lambda\,\mathrm{JS}\big(p_a \,\|\, p_b\big),
 \end{equation}
+where JS is the Jensen-Shannon divergence \cite{lin1991divergence} between the two softmax outputs, symmetric and bounded, with gradients through both branches so that neither rendering acts as a teacher. With $\lambda = 0$ the same pairs give the augmentation-only control.
 
+\subsection{Numeric Baseline}
+E5 applies a 1D CNN to the raw $30 \times 5$ array, with prices divided by the anchor close minus one and volume divided by its window mean followed by $\log(1+x)$. The network has three blocks of a kernel-3, 64-channel convolution, batch normalization, and ReLU, then global average pooling over time and a linear head, trained with the same recipe on CPU.
+
+% ---------------------------------------------------------------------------
 \section{Experimental Design and Ablations}\label{sec:design}
-% Owner: Kaushik | Draft Nov 21 | 0.6 pages | Ablation matrix A1 to A8
-\draft{Experiment matrix B0, E1 to E5; ablations A1 to A8; fairness controls for the CNN and ViT comparison; tuning budget and selection rules.}
-\draft{Compute environment for reproducibility: a single NVIDIA GeForce RTX 5090 GPU for all image-model experiments (B0 and E5 on CPU), fp16 mixed precision, PyTorch and timm versions, seeds, epoch cap, optimizer, learning rate, batch size, checkpoint selection by validation Macro F1.}
+Table~\ref{tab:design} lists the experiments. All of them use the same data, labels, splits, test windows, resolution, epoch cap, and evaluation code; only the architecture, training renderings, loss, and $\lambda$ differ.
 
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Experiment matrix. Seen renderings: R0, R1, R2, R4.}
+\label{tab:design}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Exp. & Model & Training renderings & Loss \\
+\midrule
+B0 & majority / stratified random / momentum & none & none \\
+E1 & ResNet-18 & R0 & CE \\
+E2 & DeiT-S & R0 & CE \\
+E3b & ResNet-18 & seen pairs & paired CE ($\lambda=0$) \\
+E4b & DeiT-S & seen pairs & paired CE ($\lambda=0$) \\
+E3 & ResNet-18 & seen pairs & paired CE + $\lambda$ JS \\
+E4 & DeiT-S & seen pairs & paired CE + $\lambda$ JS \\
+E5 & 1D CNN on numbers & none (array) & CE \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Ablations.} A1 (E1$\to$E3b) and A3 (E2$\to$E4b) add multi-rendering exposure; A2 (E3b$\to$E3) and A4 (E4b$\to$E4) add the consistency term on identical image pairs; A5 compares the architectures (E1 vs E2, E3b vs E4b, E3 vs E4); A6 compares the image models with the numeric baseline E5; A7 compares seen and held-out renderings for the same model; and A8 compares every model with the best trivial baseline.
+
+\textbf{Tuning and selection (validation only).} Decision D11 gives each image architecture the same four-run budget on seed 0: ResNet-18 $\mathrm{lr} \in \{10^{-4}, 3\times10^{-4}\}$ and DeiT-S $\mathrm{lr} \in \{5\times10^{-5}, 10^{-4}\}$, each with weight decay $\in \{0.01, 0.05\}$; E5 tunes $\mathrm{lr} \in \{10^{-3}, 3\times10^{-3}\}$. The highest validation Macro F1 is selected and frozen; E3b, E4b, E3, and E4 inherit the frozen learning rate and weight decay of their architecture. Decision D13 selects $\lambda \in \{0.3, 1, 3\}$ for E3 and E4: among candidates whose validation Macro F1 is at least that of the matching control minus 0.01, the lowest validation seen-rendering flip rate wins. E5's weight decay, which the plan left open, was chosen by the same validation-only rule between 0.01 and 0.05 before any E5 test prediction existed. No test number was used for any choice.
+
+\textbf{Baselines and seeds.} B0 contains three trivial references fitted on training data only: the majority class, a stratified random classifier (three seeds), and a momentum rule that applies the label's own scaling to the previous five days, $z_{\text{past}} = (C_d/C_{d-5} - 1)/(\sigma_{30}\sqrt{5})$, with training tertile thresholds. Every frozen image experiment and E5 is trained with seeds 0, 1, and 2; the selected seed-0 tuning run is reused as seed 0.
+
+\textbf{Compute environment.} All reported image-model experiments were executed on a single NVIDIA GeForce RTX 5090 GPU (32 GB) with fp16 mixed precision, PyTorch 2.14.1 \cite{paszke2019pytorch}, CUDA 13.0, and timm 1.0.31, so the ResNet and DeiT comparisons share one compute environment; B0 and E5 ran on CPU. Every run record stores the code commit, a clean-tree flag, the data and render versions, the configuration hash, the runtime GPU and library versions, and the hash of its prediction file, and an automated validation gate checked complete prediction coverage before any run entered evaluation.
+
+% ---------------------------------------------------------------------------
 \section{Evaluation Metrics}\label{sec:metrics}
-% Owner: Parth | Draft Nov 21 | 0.6 pages
-\draft{Predictive, robustness, reliability, stability, interpretability metrics; why each; the baselines each result is compared with.}
+All numbers come from the 2020--2024 test split. For multi-seed experiments we report mean $\pm$ standard deviation over three seeds.
+
+\textbf{Predictive.} Macro F1 (primary, so that a model predicting mostly one class cannot look good), accuracy, per-class precision, recall, and F1, and macro one-versus-rest AUROC, which measures ranking quality without an argmax threshold.
+
+\textbf{Robustness.} For rendering $r$ the flip rate $\mathrm{FR}(r)$ is the share of test windows whose predicted class differs from R0; $\mathrm{FR}_{\text{seen}}$ averages R1, R2, R4 and $\mathrm{FR}_{\text{held}}$ averages R3, R5, R6; the any-flip rate counts windows that flip under at least one rendering. Probability dispersion $\mathrm{PD}(r)$ is the mean total-variation distance $\tfrac{1}{2}\lVert p(w,r) - p(w,R0)\rVert_1$, which captures changes that do not cross the argmax. We also report $\Delta\mathrm{F1}(r)$ relative to R0 and the shift of the predicted-class distribution. Because a model that predicts one class has a flip rate of zero, every flip rate is read next to Macro F1 and the predicted-class distribution.
+
+\textbf{Reliability.} Expected calibration error with 15 equal-width confidence bins \cite{naeini2015ece} and the Brier score \cite{brier1950verification}.
+
+\textbf{Stability and uncertainty.} Cross-seed disagreement is the mean share of test windows on which two seeds of the same experiment predict different R0 classes; it is the reference for how much a flip rate could come from retraining alone. Comparisons report the seed-averaged difference with a 95\% moving-block bootstrap interval that resamples 63-trading-day blocks of test anchor dates (all assets and renderings kept together) 1{,}000 times \cite{kunsch1989jackknife}, which respects time correlation.
+
+\textbf{Interpretability.} On 2{,}000 test windows stratified by class and the seed-0 models, Grad-CAM \cite{selvaraju2017gradcam} (ResNet) and attention rollout \cite{abnar2020rollout} (DeiT) give the share of attribution mass in each image region divided by its area share. Region masking fills candles, volume bars, grid, or axes with the background colour and records the change $\Delta p$ in the probability of the originally predicted class, compared with an area-matched random mask of non-ink pixels in the same panel.
 
 % ---------------------------------------------------------------------------
 \section{Results}\label{sec:results}
-% Numbers only from generated/ fragments. Every statement: metric, baseline, comparison, scope.
-\subsection{Predictive Performance}             % Owner: Kaushik
+% RESULTS-DEPENDENT: every number below comes from the generated tables of the frozen results.
+\subsection{Predictive Performance}
 \gen{tables/table1_main.tex}{Table 1: main results, generated}
-\draft{10.1}
-\subsection{Rendering Robustness and Interventions} % Owner: Khushi
+\draft{Results 10.1 (written from the frozen tables).}
+
+\subsection{Rendering Robustness and Interventions}
 \gen{tables/table2_per_render.tex}{Table 2: per-rendering sensitivity, generated}
 \gen{tables/table5_comparisons.tex}{Table 5: planned comparisons A1 to A7, generated}
 \genfig{fig3_flip_by_render.pdf}{Flip rate against R0 for each rendering factor (test split, mean $\pm$ SD over seeds). Shaded: held-out factors, never seen in training or tuning.}{fig:flip_by_render}{Figure 3: flip rate by rendering, generated}
 \genfig{fig4_tradeoff.pdf}{Macro F1 on R0 against the held-out flip rate, one point per seed.}{fig:tradeoff}{Figure 4: F1 vs held-out flip rate, generated}
-\draft{10.2}
-\subsection{Calibration and Stability}          % Owner: Parth
+\draft{Results 10.2 (written from the frozen tables).}
+
+\subsection{Calibration and Stability}
 \gen{tables/table4_seeds.tex}{Table 4: stability and cross-seed disagreement, generated}
 \gen{tables/table7_calibration.tex}{Table 7: ECE and Brier, generated}
-\draft{10.3}
+\draft{Results 10.3 (written from the frozen tables).}
 
 \section{Interpretability and Error Analysis}\label{sec:interp}
-% Owner: Farzaan | Table 3, Figures 6 and 7
 \gen{tables/table3_masking.tex}{Table 3: masking by region, generated}
 \gen{tables/table3b_link.tex}{Table 3b: attribution-to-flip AUROC, generated}
-\genfig{fig6_attribution.pdf}{Attribution mass share divided by area share per region on R0 (Grad-CAM for ResNet-18, attention rollout for DeiT-S; seed-0 models, D15 sample). Dashed line: mass proportional to area.}{fig:attribution}{Figure 6: attribution mass ratio by region, generated}
-\genfig{fig7_masking.pdf}{Mean $|\Delta p|$ when a region is filled with the background colour, against an area-matched random non-ink control (R0, seed-0 models, D15 sample).}{fig:masking}{Figure 7: masking vs area-matched control, generated}
-\draft{11}
+\genfig{fig6_attribution.pdf}{Attribution mass share divided by area share per region on R0 (Grad-CAM for ResNet-18, attention rollout for DeiT-S; seed-0 models, 2{,}000 class-stratified test windows). Dashed line: mass proportional to area.}{fig:attribution}{Figure 6: attribution mass ratio by region, generated}
+\genfig{fig7_masking.pdf}{Mean $|\Delta p|$ when a region is filled with the background colour, against an area-matched random non-ink control (R0, seed-0 models, 2{,}000 class-stratified test windows).}{fig:masking}{Figure 7: masking vs area-matched control, generated}
+\draft{Section 11 (written from the interpretability outputs).}
 
-\section{Discussion}\label{sec:discussion}      % Owner: Khushi
-\draft{12: interpretation using the predefined logic, scoped to tested renderings and setup.}
+\section{Discussion}\label{sec:discussion}
+\draft{Section 12: interpretation using the predefined logic, scoped to the tested renderings and training setup.}
 
-\section{Sustainability}\label{sec:sustain}     % Owner: Kaushik
-\draft{13: SDG 9 (target 9.5) connection and its limits; measured compute footprint from the compute ledger.}
+% ---------------------------------------------------------------------------
+\section{Sustainability}\label{sec:sustain}
+The project connects to UN Sustainable Development Goal 9 (industry, innovation, and infrastructure), target 9.5 (enhance scientific research and the technological capabilities of industrial sectors): it tests whether an increasingly popular class of AI tools for financial analytics responds to the financial content of a chart or to how the chart happens to be drawn, which matters for any institution that would rely on such tools. The connection is indirect: we make no claim about financial inclusion or market outcomes.
+
+We kept the compute footprint small by design: one fixed recipe with a four-run tuning budget per architecture instead of open-ended search, early stopping, a predeclared $\lambda$ grid of three values, pretrained small models (11.7M and 22.1M parameters), a numeric baseline on CPU, and a pre-rendered image registry so that no image is drawn twice. Table~\ref{tab:ledger} lists the measured GPU time of every run from the run records; the energy column multiplies GPU hours by the GPU's board power and is therefore an upper bound.
 \gen{tables/table_ledger.tex}{Compute ledger, generated by scripts/compute\_ledger.py}
 
-\section{Lessons Learned and Best Practices}\label{sec:lessons} % Owner: Farzaan
-\draft{14: from docs/lessons\_learned.md.}
+\section{Lessons Learned and Best Practices}\label{sec:lessons}
+The team kept a shared lessons log during the project; the main lessons were technical and procedural.
+\textbf{Leakage is a property of time spans, not rows.} Overlapping windows share trading days, so we derived the purge from the 35-day information span of a sample and tested that no trading day is shared across a boundary, instead of relying on a date cut.
+\textbf{A passing test suite only covers what it imports.} An integration branch passed its tests while the trainer stack could not be imported at all; we added import and command-line checks for every module.
+\textbf{Gates must be tested with the inputs they should reject.} A queue-integrity check passed when \texttt{git} itself failed, and a results gate would have rejected every correct CPU run of the numeric baseline because it encoded a misread hardware rule; both were found by writing tests for the failure cases.
+\textbf{``Same images per step'' includes batch statistics.} Paired runs first used two 64-image forward passes, which gives a BatchNorm network different statistics from the 128-image single-rendering runs; one 128-image forward fixed it.
+\textbf{Real hardware finds bugs that CPU tests cannot.} Resuming from a checkpoint failed only on CUDA, because the saved random-number state was moved to the GPU; the GPU smoke test caught it before any reported run.
+\textbf{Provenance checks need to know what the pipeline writes.} The clean-tree check counted the pipeline's own outputs as uncommitted changes, which would have blocked selection and validation of every real run; it now ignores only the pipeline's output folders.
+\textbf{Unattended runs need watchers that fail loudly.} A selection step refused its input overnight and the queue stopped; idempotent, resumable runs meant that no completed work was lost, but the idle time showed that a stop must alert, not only log.
+Best practices we would keep: freeze every decision before the first test number, make every gate fail closed, record hashes for every artifact, and test resume and selection on the real hardware early.
 
-\section{Innovation and Publication Potential}\label{sec:innovation} % Owner: Khushi
-\draft{15}
+\section{Innovation and Publication Potential}\label{sec:innovation}
+The design is new for financial chart images in three ways: exact information-preserving rendering counterfactuals with seen and held-out factors, a paired control that isolates a consistency objective from data exposure, and a CNN-versus-transformer comparison under one recipe with a numeric baseline on the same windows. The rendering registry and evaluation code are reusable for any chart-image model. A workshop paper on robustness or financial machine learning (for example a NeurIPS or ICML workshop on distribution shift or on AI in finance) would need additional assets or markets, more seeds and renderings per factor, and an economic evaluation of whether rendering sensitivity changes trading outcomes.
 
-\section{Limitations}\label{sec:limits}         % Owner: Parth
-\draft{16}
+\section{Limitations}\label{sec:limits}
+The study covers 50 liquid US assets, one window length, one horizon, and a weak predictive signal, so robustness is measured on models whose accuracy is only modestly above trivial baselines. Each factor is represented by one counterfactual rendering, and only three factors are held out. Results use three seeds and one compute environment, a fixed recipe, and a small tuning budget; other recipes, larger models, or longer training could change both accuracy and robustness. Interpretability uses seed-0 models and 2{,}000 test windows. We make no profitability or trading claim.
+\draft{Add result-specific limitations after the results freeze.}
 
-\section{Conclusion}\label{sec:conclusion}      % Owner: Parth
-\draft{17}
+\section{Conclusion}\label{sec:conclusion}
+\draft{Section 17 (written from the frozen results).}
 
 \section*{CRediT Authorship Contribution Statement}
-% Owner: Parth. Built from substantive technical ownership; confirm against git log and technical_owner fields at the results freeze.
 \textbf{Farzaan Dalwai:} Conceptualization, Methodology, Software, Data curation, Validation, Investigation, Formal analysis, Visualization, Writing (original draft). Data curation, preprocessing, temporal splitting and leakage controls, counterfactual rendering pipeline, numeric baseline methodology, and masking analysis.
 \textbf{Kaushik Hariharan:} Conceptualization, Methodology, Software, Validation, Investigation, Formal analysis, Visualization, Writing (original draft). Shared training infrastructure, ResNet-18 methodology and experiments, augmentation and consistency CNN experiments, and Grad-CAM analysis.
 \textbf{Khushi Donda:} Conceptualization, Methodology, Software, Investigation, Validation, Formal analysis, Visualization, Writing (original draft). Vision Transformer methodology and experiments, consistency objective, $\lambda$-selection methodology, attention-rollout analysis, and robustness interpretation.
 \textbf{Parth Patel:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Visualization, Writing (original draft), Writing (review and editing), Project administration. Evaluation methodology, robustness metrics, calibration, statistical analysis, experiment integration, result synthesis, and report integration.
-\draft{Refine to the work actually completed.}
+\draft{Each member confirms this statement against the work actually completed.}
 
 % ---------------------------------------------------------------------------
 \bibliographystyle{IEEEtran}
@@ -176,7 +257,6 @@ Financial chart images, shortcut learning, counterfactual rendering, robustness,
 \appendices
 
 \section{Rubric Evidence}\label{app:rubric}
-% Owner: Parth. Same order as the rubric. Every claim needs evidence the teaching team can open.
 \begin{table*}[!t]
 \centering
 \caption{How each rubric criterion was met}
@@ -186,38 +266,40 @@ Financial chart images, shortcut learning, counterfactual rendering, robustness,
 \toprule
 \textbf{Criterion} & \textbf{How we met it} & \textbf{Evidence} & \textbf{External link or file} \\
 \midrule
-1. Report (7) & \draft{IEEE template, page count, size, grammar review} & \draft{PDF page count and size} & \draft{Canvas submission} \\
-2. Sustainability (5) & \draft{SDG 9 mapping; compute footprint} & Section~\ref{sec:sustain} & \draft{compute ledger link} \\
-3. Lessons learned (5) & \draft{Shared log; Section 14} & Section~\ref{sec:lessons} & \draft{GitHub docs/lessons\_learned.md} \\
-4. Publication or competition (3) & \draft{Novelty, needed experiments, venues} & Section~\ref{sec:innovation} & \\
-5. Innovation (5) & \draft{Counterfactual renderings, held-out factors, controls} & Sections~\ref{sec:render}, \ref{sec:design} & \\
-6. Evaluation of performance (5) & \draft{Metrics, baselines, ablations, seeds, masking} & Sections~\ref{sec:metrics} to \ref{sec:interp} & \draft{GitHub outputs/eval} \\
-7. Technical difficulty (7) & \draft{Technical inventory} & Appendix~\ref{app:technical} & \draft{GitHub repository} \\
-8. LaTeX (1) & Native IEEE LaTeX source & Source files submitted & \draft{Canvas source zip} \\
-9. Literature survey (5) & \draft{Number of papers, subsections, gap} & Section~\ref{sec:related} & \\
+1. Report (7) & Native IEEE Computer Society LaTeX, numbered sections, generated tables and figures, references & This PDF & Canvas submission \\
+2. Sustainability (5) & SDG 9 (target 9.5) mapping and its limits; measured compute ledger & Section~\ref{sec:sustain}, Table~\ref{tab:ledger} & \texttt{scripts/compute\_ledger.py} \\
+3. Lessons learned (5) & Shared lessons log, failures and fixes, best practices & Section~\ref{sec:lessons} & \texttt{docs/lessons\_learned.md} \\
+4. Publication or competition (3) & Novelty, extra experiments needed, venues & Section~\ref{sec:innovation} & \\
+5. Innovation (5) & Counterfactual renderings with held-out factors, paired controls, numeric baseline & Sections~\ref{sec:render}, \ref{sec:design} & \\
+6. Evaluation of performance (5) & Predictive, robustness, calibration, stability metrics; baselines; ablations A1 to A8; 3 seeds; block bootstrap; masking & Sections~\ref{sec:metrics} to \ref{sec:interp} & \texttt{scripts/evaluate.py} \\
+7. Technical difficulty (7) & Leakage-controlled data, rendering registry, two architectures, paired consistency training, validation gates & Appendix~\ref{app:technical} & GitHub repository \\
+8. LaTeX (1) & Native IEEE LaTeX source & Source files submitted & Canvas source zip \\
+9. Literature survey (5) & 30 references in 8 subsections with a stated research gap & Section~\ref{sec:related} & \texttt{report/references.bib} \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
 \section{Generative AI and Tool Use Disclosure}\label{app:genai}
-% Owner: Khushi. Built from docs/ai_use_log.md. Only tools actually used.
-\draft{One paragraph on what AI tools were and were not used for, then the table.}
+Team members used AI assistants for planning, code, tests, and drafting documentation and report text, as logged in \texttt{docs/ai\_use\_log.md}. AI tools did not choose the research questions, experiment design, or any reported number: every number comes from \texttt{scripts/evaluate.py} on the frozen run set, and every selection used the predeclared validation-only rules. Each member reviewed the code and text attributed to them.
 \begin{table*}[!t]
 \centering
-\caption{AI and tool use}
+\caption{AI and tool use (from the shared AI-use log)}
 \label{tab:genai}
 \small
 \begin{tabularx}{\textwidth}{@{}p{1.7cm}p{2.2cm}p{2.9cm}YYY@{}}
 \toprule
 \textbf{Date} & \textbf{Member} & \textbf{Tool and model} & \textbf{Purpose and prompt category} & \textbf{Artifact affected} & \textbf{Human verification} \\
 \midrule
-2026-11-19 & Parth Patel & Claude (claude.ai), Claude Opus 5.5 & Project planning from the team specification and rubric & Execution plan, starter documentation, this skeleton & \draft{reviewer and checks} \\
+2026-11-19 & Parth Patel & Claude (claude.ai), Claude Opus 5.5 & Project planning from the team specification and rubric & Execution plan, starter documentation, report skeleton & \draft{reviewer and checks} \\
+2026-11-22 & Farzaan Dalwai & Claude Code, Claude Opus 5.5 & Data and rendering pipelines (G1, G2) & \texttt{src/data}, \texttt{src/rendering}, build scripts, tests & Independent G1/G2 verification; \draft{owner's own review} \\
+2026-11-22 to 24 & Parth Patel & Claude Code, Claude Opus 5.5 & Evaluation and validation pipeline, training integration fixes, GPU execution driver, interpretability and report-asset tooling, report drafting & \texttt{src/evaluation}, \texttt{scripts/}, tests, this report's text & Full test suites, GPU smoke tests, gate checks; \draft{author review of every section} \\
+\draft{other members' rows from the AI-use log} & & & & & \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
 \section{Technical Inventory and Supplementary Results}\label{app:technical}
-% Owner: Kaushik (inventory, compute ledger); Parth (per-seed tables); Farzaan (split report, test summary)
-\draft{Modules, tests passed, compute ledger, per-seed tables, deviations log.}
+The repository contains the data pipeline (download with hash manifest, cleaning, global calendar, windowing, split with purge, train-only labels), the rendering registry (rasterizer, seven styles, region geometry, archive packaging), the shared trainer (paired sampler, consistency loss, resumable checkpoints), model wrappers, the numeric baseline and trivial baselines, the evaluation package (predictive, robustness, calibration, seed, and block-bootstrap statistics), validation and results-freeze gates, interpretability tools (Grad-CAM, attention rollout, region masking), and report-asset generators, with over 400 automated tests.
+\draft{Per-seed tables and the deviations log after the results freeze.}
 
 \end{document}
