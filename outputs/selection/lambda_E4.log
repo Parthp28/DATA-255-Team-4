@@ -1,0 +1,11 @@
+D13 lambda selection: validation, seed 0, seen renderings only
+ATTESTATION: operator attests, NOT verified by this script: every run is RESULT_VALIDATED by its technical owner, was trained on the full training data (not a 20% debug subset) on the D16 GPU, and its metrics come from evaluate.py
+run metadata: status and git_dirty checked from the run records (status complete/promoted, git_dirty false)
+input rows: 636 read, 20 used, 276 excluded (not val / seed 0 / seen), 0 belong to other experiments, 0 superseded run(s) skipped
+Macro F1 = mean over R0+R1+R2+R4; FR on 'seen'; margin 0.01 (one-sided); candidates ['0.3', '1', '3']; lambda from run records in outputs/runs
+
+E4 (control E4b, run E4b_s0_35e7ed61, validation Macro F1 0.347031):
+  lambda=0.3  run E4_s0_7716c90a: val F1=0.346942 (delta -0.000089) val FR_seen=0.140278 eligible
+  lambda=1    run E4_s0_6dcd27a4: val F1=0.349669 (delta +0.002638) val FR_seen=0.147639 eligible
+  lambda=3    run E4_s0_c53bbce3: val F1=0.349544 (delta +0.002513) val FR_seen=0.081250 eligible  <== selected
+  -> lambda = 3: lowest validation seen flip rate (0.081250) among 3 of 3 candidates with validation Macro F1 within 0.01 of E4b (0.347031)

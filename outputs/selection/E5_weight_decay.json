@@ -1,0 +1,17 @@
+{
+  "decision": "E5 weight_decay",
+  "chosen": 0.01,
+  "candidates": {
+    "0.01": {
+      "run_id": "E5_s0_125d170f",
+      "val_macro_f1": 0.37193738506566315
+    },
+    "0.05": {
+      "run_id": "E5_s0_cf6a92d6",
+      "val_macro_f1": 0.3561932423980984
+    }
+  },
+  "tie_at_3_decimals": false,
+  "rule": "higher validation Macro F1 (seed 0, lr 1e-3, identical data/architecture/recipe); a tie at 3 decimals goes to 0.05, the ExperimentConfig and shared-recipe default; decided before any E5 test prediction",
+  "decided_utc": "2026-11-24T08:25:08+00:00"
+}

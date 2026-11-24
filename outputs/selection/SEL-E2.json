@@ -1,0 +1,39 @@
+{
+  "experiment_id": "E2",
+  "rule": "D11: highest validation Macro F1 (own renderings), seed 0",
+  "selected_run_id": "E2_s0_92fe8875",
+  "frozen_config": "configs/frozen/E2.yaml",
+  "candidates": [
+    {
+      "run_id": "E2_s0_176be222",
+      "lr": 0.0001,
+      "weight_decay": 0.05,
+      "val_macro_f1_own_renders": 0.3503116543075197,
+      "selected": false
+    },
+    {
+      "run_id": "E2_s0_882c6670",
+      "lr": 5e-05,
+      "weight_decay": 0.05,
+      "val_macro_f1_own_renders": 0.35019941488471407,
+      "selected": false
+    },
+    {
+      "run_id": "E2_s0_92fe8875",
+      "lr": 5e-05,
+      "weight_decay": 0.01,
+      "val_macro_f1_own_renders": 0.3512262004585211,
+      "selected": true
+    },
+    {
+      "run_id": "E2_s0_cc581632",
+      "lr": 0.0001,
+      "weight_decay": 0.01,
+      "val_macro_f1_own_renders": 0.3383858838984312,
+      "selected": false
+    }
+  ],
+  "skipped": {},
+  "metrics_used": "validation only",
+  "created": "2026-11-24T08:28:47+00:00"
+}

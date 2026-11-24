@@ -1,0 +1,38 @@
+{
+  "synthetic": false,
+  "sources": {
+    "metrics_long.csv": "f59defa4eb91f7473c8f3a5e21f7e8236d69626c9a791cf2f918bfafb3236e25",
+    "per_render.csv": "b9fb98d29d353974b629878493c3c8eb2fc61dcc6c02128aea83d0e6e8588a53",
+    "seeds.csv": "e006e3f8a2ac0fc36ea8838a80ef04adb1e16678a03f5d2d794e5db5289bc857",
+    "comparisons.csv": "daa54b017a40b7833683ecf43d9b61a985c5dfd9d3c6737b3019fc14c0d794a3",
+    "masking/E1_s0_c9372b69.parquet": "1dc09fbffa859469bde88c91ac4b6eaeabe25ff9d5a3a224d3791922086975d3",
+    "masking/E2_s0_92fe8875.parquet": "6ae1a450244e861aaedec931f67d23b4b4fb27df5de0c6933b58bd2d2dbdf43e",
+    "masking/E3_s0_dd68dcd7.parquet": "f68cd7f8e3b01618960046d729f48d28365dbaffc06aa27d34e5b3301e365be3",
+    "masking/E3b_s0_f33c4605.parquet": "fb62fb7b51b289e9109799fb2ffe45dfd1f415565f44b4726e990f2c1684c16c",
+    "masking/E4_s0_c53bbce3.parquet": "901386a4609d883f74956fbe8c92080d8e258e5e27375a0a42b5eff8ffef6ff5",
+    "masking/E4b_s0_35e7ed61.parquet": "e90ea251d80766a0eda0bcaa050be1c041789e0284ae8711aebe9bc9f5e4e84e",
+    "attribution/E1_s0_c9372b69.parquet": "ab56467e12d22bbae46c406c4f955a1ffb4b23a81329d6e039ac12211804146a",
+    "attribution/E2_s0_92fe8875.parquet": "9c2f2b71ac2efc0cdb3d3af1229bbd536db8dd7b011cc3b4cd6bc7a4fffb5eba",
+    "attribution/E3_s0_dd68dcd7.parquet": "dbc050d499f0cf6d4613bd715972b5f0161b130221b64fcbe609ae38d16349a5",
+    "attribution/E3b_s0_f33c4605.parquet": "cb7556278b2df7dda3c5573c188a761a297f18445653a58c428c789b67b1f52c",
+    "attribution/E4_s0_c53bbce3.parquet": "7a7973c49e251267d0be4a7f576c55cbd82303aa99b34a1770bf0200bfd4ac9d",
+    "attribution/E4b_s0_35e7ed61.parquet": "a28fedf5972f2b0e7a2c4f3dd5405ca1413b5ed2ddd171e9957642fa9e3e4cbd",
+    "freeze manifest": "46c7af840e633333624c1c434810504d09effa606030ae8c3b37fc864976834f"
+  },
+  "written": [
+    "figures/fig1_renderings.pdf",
+    "figures/fig3_flip_by_render.pdf",
+    "figures/fig4_tradeoff.pdf",
+    "figures/fig5_reliability.pdf",
+    "figures/fig6_attribution.pdf",
+    "figures/fig7_masking.pdf",
+    "figures/fig8_confusion.pdf",
+    "tables/table1_main.tex",
+    "tables/table2_per_render.tex",
+    "tables/table3_masking.tex",
+    "tables/table3b_link.tex",
+    "tables/table4_seeds.tex",
+    "tables/table5_comparisons.tex",
+    "tables/table7_calibration.tex"
+  ]
+}

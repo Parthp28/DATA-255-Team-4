@@ -1,0 +1,4 @@
+experiment_id,baseline_experiment_id,run_id,baseline_run_id,lambda,val_macro_f1,baseline_val_macro_f1,f1_delta,val_fr_seen,eligible,selected,rule,f1_renders,f1_margin,run_metadata_checked
+E4,E4b,E4_s0_7716c90a,E4b_s0_35e7ed61,0.3,0.346942,0.347031,-0.000089,0.140278,true,false,eligible,R0+R1+R2+R4,0.01,true
+E4,E4b,E4_s0_6dcd27a4,E4b_s0_35e7ed61,1,0.349669,0.347031,+0.002638,0.147639,true,false,eligible,R0+R1+R2+R4,0.01,true
+E4,E4b,E4_s0_c53bbce3,E4b_s0_35e7ed61,3,0.349544,0.347031,+0.002513,0.081250,true,true,eligible,R0+R1+R2+R4,0.01,true
