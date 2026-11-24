@@ -70,7 +70,7 @@ python scripts/make_report_assets.py
 
 ## Compute environment
 
-Final reported image-model experiments are planned on NVIDIA T4 GPUs with fp16 mixed precision; PyTorch and timm versions will be recorded in every `run.json`. Planned recipe: AdamW, cosine schedule with 1 warmup epoch, at most 10 epochs, early stopping with patience 3, 128 images per step, 224 × 224 inputs, seeds 0, 1, 2; the checkpoint with the best validation Macro F1 will be used for testing.
+All reported image-model experiments are planned on a single NVIDIA GeForce RTX 5090 GPU with fp16 mixed precision (D16, `docs/compute_environment.md`); B0 and E5 run on CPU; PyTorch and timm versions will be recorded in every `run.json`. Planned recipe: AdamW, cosine schedule with 1 warmup epoch, at most 10 epochs, early stopping with patience 3, 128 images per step, 224 × 224 inputs, seeds 0, 1, 2; the checkpoint with the best validation Macro F1 will be used for testing.
 
 ## Repository layout
 

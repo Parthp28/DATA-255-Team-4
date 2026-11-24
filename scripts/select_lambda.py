@@ -54,7 +54,7 @@ Blocking prerequisites for a REAL selection (not checkable by this script; open 
     (Section 16) has evaluate.py enforce it before any metrics_long.csv row exists. So, before the G5
     selection, the team must confirm that:
       1. the metrics table was produced by evaluate.py, and every run in it is RESULT_VALIDATED by its owner;
-      2. every run was trained on the FULL training data (no 20% debug subset) on a T4;
+      2. every run was trained on the FULL training data (no 20% debug subset) on the D16 GPU;
       3. Parth has verified the aggregate ``seen`` row (above), and the real run.json layout matches the
          assumption above.
     Until then the operator must say so explicitly with --attest-validated-full-data (items 1 and 2); the
@@ -95,7 +95,7 @@ OUT_COLUMNS = (
 )
 ATTESTATION = (
     "operator attests, NOT verified by this script: every run is RESULT_VALIDATED by its technical owner, was trained "
-    "on the full training data (not a 20% debug subset) on a T4, and its metrics come from evaluate.py"
+    "on the full training data (not a 20% debug subset) on the D16 GPU, and its metrics come from evaluate.py"
 )
 
 
@@ -503,7 +503,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--experiments", nargs="+", choices=sorted(BASELINE_OF), default=sorted(BASELINE_OF))
     ap.add_argument("--filter-input", action="store_true", help="drop (and count) rows that are not validation / seed 0 / seen instead of refusing the file")
     ap.add_argument("--attest-validated-full-data", action="store_true",
-                    help="REQUIRED: you attest every run is RESULT_VALIDATED, trained on the full data (no 20%% debug subset) on a T4, "
+                    help="REQUIRED: you attest every run is RESULT_VALIDATED, trained on the full data (no 20%% debug subset) on the D16 GPU, "
                          "and measured by evaluate.py. The script cannot verify this; the attestation is printed in the log")
     ap.add_argument("--allow-unchecked-run-metadata", action="store_true",
                     help="required with --lambda-map: acknowledge that status and git_dirty are NOT checked (not valid for the real selection)")
@@ -512,7 +512,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = ap.parse_args(argv)
     if not args.attest_validated_full_data:
         print("select_lambda: refusing to select without --attest-validated-full-data. This script cannot tell debug-subset or "
-              "unvalidated runs from final ones; you must confirm that every run is RESULT_VALIDATED, trained on the full data on a T4, "
+              "unvalidated runs from final ones; you must confirm that every run is RESULT_VALIDATED, trained on the full data on the D16 GPU, "
               "and measured by evaluate.py (see the module docstring).", file=sys.stderr)
         return 2
     if args.lambda_map and not args.allow_unchecked_run_metadata:

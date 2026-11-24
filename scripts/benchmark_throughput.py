@@ -7,8 +7,8 @@ Builds the experiment's model through scripts/train.build_model (weights are not
 speed) and times full training steps on random 224 x 224 batches (forward + backward + AdamW, fp16 AMP and
 grad clipping on CUDA), inference, and, with --data-root, the PNG loader (ChartImageDataset). --probe-batch
 tries {128, 96, 64, 32} images per step and reports the largest that fits; if 128 does not fit, keep 128
-images per step through gradient accumulation (plan 19). A1 assumes about 700 (ResNet-18) and 250 (DeiT-S)
-train images/s on a T4; the queue is rescaled if the measurement is off by more than 30%. The GPU model is
+images per step through gradient accumulation (plan 19). A1 assumed about 700 (ResNet-18) and 250 (DeiT-S)
+train images/s (planned on a T4, before D16 was amended); the ratio is reported against them; the queue is rescaled if the measurement is off by more than 30%. The GPU model is
 read from the runtime. Writes outputs/smoke/<experiment>/throughput.json.
 """
 from __future__ import annotations

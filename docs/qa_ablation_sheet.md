@@ -63,7 +63,7 @@ E3b and E4b train on the same pairs as E3 and E4 with λ = 0. A control that saw
 
 ## 3. Thirty-second technical answers
 
-**Why ResNet-18?** A standard, well-understood CNN that fine-tunes in minutes on a T4. Residual connections compute y = F(x) + x, so gradients pass through the identity path and deep networks train reliably. We use ImageNet-1k weights trained with a modern strong-augmentation recipe (timm `resnet18.a1_in1k`) so its pretraining is closer to DeiT's.
+**Why ResNet-18?** A standard, well-understood CNN that fine-tunes in minutes on a single GPU. Residual connections compute y = F(x) + x, so gradients pass through the identity path and deep networks train reliably. We use ImageNet-1k weights trained with a modern strong-augmentation recipe (timm `resnet18.a1_in1k`) so its pretraining is closer to DeiT's.
 
 **How does a residual block work?** Two 3 × 3 convolutions with batch normalization and ReLU, plus a skip connection that adds the block's input to its output; when the shape changes, a 1 × 1 convolution projects the skip path.
 

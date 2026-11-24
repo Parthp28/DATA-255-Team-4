@@ -106,11 +106,12 @@ class Trainer:
         return st
 
     def _set_rng_state(self, st: dict) -> None:
-        torch.set_rng_state(st["torch"])
+        # RNG states must be CPU ByteTensors, whatever device the checkpoint was mapped to
+        torch.set_rng_state(st["torch"].cpu())
         np.random.set_state(st["numpy"])
         random.setstate(st["python"])
         if "cuda" in st and self.device.type == "cuda":
-            torch.cuda.set_rng_state_all(st["cuda"])
+            torch.cuda.set_rng_state_all([s.cpu() for s in st["cuda"]])
 
     def save_last(self, path: str, opt, sched, state: dict) -> None:
         """Full training state after a finished epoch, written atomically."""
@@ -121,7 +122,8 @@ class Trainer:
         os.replace(tmp, path)
 
     def load_last(self, path: str, opt, sched) -> dict:
-        ckpt = torch.load(path, map_location=self.device, weights_only=False)
+        # Load on CPU: load_state_dict moves model/optimizer state to their devices; RNG states must stay on CPU.
+        ckpt = torch.load(path, map_location="cpu", weights_only=False)
         if ckpt.get("config") != self.cfg.to_dict():
             raise ValueError(f"{path} was written by a different configuration; refusing to resume")
         self.model.load_state_dict(ckpt["model"])

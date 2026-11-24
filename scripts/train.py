@@ -38,6 +38,7 @@ from src.training.datasets import (  # noqa: E402
 from src.training.trainer import Trainer  # noqa: E402
 from src import tracking  # noqa: E402
 from src.evaluation.frozen import frozen_config_info, verify_frozen  # noqa: E402
+from src.evaluation.gate import D16_GPU, is_d16_gpu  # noqa: E402
 from src.evaluation.gate import owner_of  # noqa: E402
 
 TUNABLE = ("lr", "weight_decay", "consistency_lambda")   # D11 grid (lr, wd) and D13 candidates (lambda)
@@ -105,6 +106,13 @@ def main(argv=None):
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
     device = torch.device(args.device)
+    if device.type == "cuda":                      # D16: reported image models on the RTX 5090 only; E5 on CPU
+        name = torch.cuda.get_device_name(device)
+        if cfg.is_numeric:
+            raise SystemExit(f"{cfg.experiment_id}: E5 runs on CPU (D16); refusing to run it on {name}")
+        if not is_d16_gpu(name):
+            raise SystemExit(f"{cfg.experiment_id}: GPU {name!r} is not the D16 GPU ({D16_GPU}); refusing to train")
+        torch.cuda.reset_peak_memory_stats(device)
 
     windows = pd.read_parquet(os.path.join(args.data_root, "windows.parquet"))
     shard_root = os.path.join(args.data_root, "shards")
@@ -122,8 +130,10 @@ def main(argv=None):
         val_eval = NumericWindowDataset(windows, ohlcv, "val")
         train_loader = DataLoader(train_ds, batch_size=cfg.images_per_step, shuffle=True,
                                   num_workers=args.num_workers)
+        t_fit = time.time()
         res = trainer.fit(train_loader, val_eval, own_render_ids=["NUM"],
                           checkpoint_path=ckpt_path, max_steps=args.max_steps, resume=not args.no_resume)
+        fit_seconds = time.time() - t_fit
         trainer.load_checkpoint(ckpt_path)
         preds = pd.concat([
             trainer.predict(NumericWindowDataset(windows, ohlcv, s), run_id, s, ckpt_path)
@@ -141,8 +151,10 @@ def main(argv=None):
             train_loader = DataLoader(train_ds, batch_size=cfg.images_per_step, shuffle=True,
                                       num_workers=args.num_workers)
         val_eval = ChartImageDataset(reg, shard_root, "val", cfg.train_renders, cfg.image_size)
+        t_fit = time.time()
         res = trainer.fit(train_loader, val_eval, own_render_ids=cfg.train_renders,
                           checkpoint_path=ckpt_path, max_steps=args.max_steps, resume=not args.no_resume)
+        fit_seconds = time.time() - t_fit
         trainer.load_checkpoint(ckpt_path)
         preds_list, expected = [], []
         for s in pred_splits:
@@ -164,7 +176,15 @@ def main(argv=None):
                "checkpoint_path": ckpt_path, "last_checkpoint_path": os.path.join(os.path.dirname(ckpt_path), "last.pt"),
                "technical_owner": owner_of(cfg.experiment_id),               # plan 5.1 ownership table
                "gpu_minutes": round(minutes, 3) if device.type == "cuda" else 0.0, **env,
-               "pretrained": bool(args.pretrained) and not cfg.is_numeric, "history": trainer.history}
+               "pretrained": bool(args.pretrained) and not cfg.is_numeric, "history": trainer.history,
+               # batch policy (D10: 128 images per step; paired = 64 windows x 2), measured speed and memory
+               "physical_batch_images": cfg.images_per_step, "effective_batch_images": cfg.images_per_step,
+               "grad_accumulation_steps": 1, "amp_active": trainer.use_amp, "fit_seconds": round(fit_seconds, 1),
+               "train_steps": len(trainer.step_losses),
+               "train_images_per_s_incl_val": round(len(trainer.step_losses) * cfg.images_per_step / fit_seconds, 1)
+               if fit_seconds > 0 else None,
+               "peak_gpu_memory_gib": round(torch.cuda.max_memory_allocated(device) / 2 ** 30, 3)
+               if device.type == "cuda" else None}
     record = tracking.write_run_json(os.path.dirname(ckpt_path), run_id, cfg,
                                      "complete", metrics, {"wall_minutes": round(minutes, 3)},
                                      extra={"prediction_splits": list(pred_splits),

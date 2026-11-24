@@ -1,9 +1,9 @@
 # GPU smoke tests P00 and H00 (gate G3)
 
 Execution plan Sections 14.3 and 16.1. Run these only after G1/G2 pass and `data/render_v1/` is present on the GPU machine.
-D16 is unchanged: reported experiments run on NVIDIA T4 GPUs. Smoke runs are never reported or promoted.
+D16 (`docs/compute_environment.md`): every reported image-model run, and therefore P00/H00, runs on the same NVIDIA GeForce RTX 5090; the smoke report's `d16_gpu` check enforces it. Smoke runs are never reported or promoted.
 
-| Job | Owner | Commands | Expected time on a T4 |
+| Job | Owner | Commands | Planned time (T4 estimate) |
 |---|---|---|---|
 | P00 | Kaushik | `python scripts/smoke_test.py --config experiments/E1.yaml --data-root data/render_v1` then `python scripts/benchmark_throughput.py --config experiments/E1.yaml --data-root data/render_v1` | about 10 min |
 | H00 | Khushi | `python scripts/smoke_test.py --config experiments/E2.yaml --data-root data/render_v1` then `python scripts/benchmark_throughput.py --config experiments/E2.yaml --data-root data/render_v1 --probe-batch` | about 10 min |
@@ -29,7 +29,7 @@ The report also records:
 
 `benchmark_throughput.py` writes `outputs/smoke/<experiment>/throughput.json`:
 - train and inference images per second, and loader images per second;
-- `ratio_to_a1` against assumption A1 (about 700 images/s for ResNet-18 and 250 for DeiT-S on a T4).
+- `ratio_to_a1` against assumption A1 (about 700 images/s for ResNet-18 and 250 for DeiT-S, planning figures made for a T4).
 
 Read the results this way:
 - **`rescale_queue: true`** means the measurement is more than 30% off A1, so the queue estimates must be rescaled.

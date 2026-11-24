@@ -9,19 +9,28 @@ import csv
 import json
 import os
 import subprocess
+from pathlib import Path
 
 from .common.config import ExperimentConfig
 
 
-def git_info() -> dict:
+ROOT = Path(__file__).resolve().parents[1]
+# Written by the pipeline itself and protected by their own hashes (prediction sha256 at validation, freeze_record),
+# so they do not make the code tree dirty. Everything else does, tracked or untracked.
+PIPELINE_ARTIFACTS = ("outputs", "configs/frozen")
+
+
+def git_info(root=None) -> dict:
+    root = Path(root or ROOT)
+
     def _run(args):
         try:
-            return subprocess.check_output(args, stderr=subprocess.DEVNULL).decode().strip()
+            return subprocess.check_output(args, cwd=root, stderr=subprocess.DEVNULL).decode().strip()
         except Exception:
-            return ""
-    commit = _run(["git", "rev-parse", "HEAD"])
-    dirty = bool(_run(["git", "status", "--porcelain"]))
-    return {"git_commit": commit, "git_dirty": dirty}
+            return None
+    commit = _run(["git", "rev-parse", "HEAD"]) or ""
+    status = _run(["git", "status", "--porcelain", "--", "."] + [f":(exclude){p}" for p in PIPELINE_ARTIFACTS])
+    return {"git_commit": commit, "git_dirty": True if status is None else bool(status)}
 
 
 def environment_info(device) -> dict:
@@ -39,6 +48,9 @@ def environment_info(device) -> dict:
     if dev.type == "cuda":
         info["gpu_model"] = torch.cuda.get_device_name(dev)
         info["cudnn_version"] = torch.backends.cudnn.version()
+        props = torch.cuda.get_device_properties(dev)
+        info["gpu_total_memory_gib"] = round(props.total_memory / 2 ** 30, 2)
+        info["gpu_compute_capability"] = f"{props.major}.{props.minor}"
     return info
 
 
