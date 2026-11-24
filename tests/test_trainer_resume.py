@@ -159,3 +159,29 @@ def test_paired_resnet_resume_through_the_shared_trainer(dummy, tmp_path):
     first = run(tmp_path / "cut", stop=1)
     resumed = run(tmp_path / "cut")
     np.testing.assert_allclose(resumed.step_losses, full.step_losses[len(first.step_losses):], rtol=1e-5)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a CUDA device")
+def test_resume_on_cuda_restores_cpu_rng_state(tmp_path):
+    """Regression: last.pt mapped to CUDA put the CPU RNG state on the GPU; torch.set_rng_state then failed."""
+    out = tmp_path / "cuda"
+    windows, ohlcv = numeric_data()
+    cfg = ExperimentConfig(**E5)
+    def run(stop=None):
+        torch.manual_seed(0)
+        t = Trainer(Numeric1DCNN(), cfg, torch.device("cuda"), str(out))
+        t.fit(DataLoader(NumericWindowDataset(windows, ohlcv, "train"), batch_size=16, shuffle=True),
+              NumericWindowDataset(windows, ohlcv, "val"), ["NUM"], str(out / "best.pt"), stop_after_epochs=stop)
+        return t
+    run(stop=1)
+    resumed = run()
+    assert resumed.history and len(resumed.history) == cfg.epochs_max
+
+
+def test_set_rng_state_accepts_states_mapped_off_cpu(tmp_path):
+    """The restore path moves states to CPU itself, so a checkpoint loaded with any map_location works."""
+    t = Trainer(Numeric1DCNN(), ExperimentConfig(**E5), torch.device("cpu"), str(tmp_path))
+    st = t._rng_state()
+    st["torch"] = st["torch"].clone()
+    t._set_rng_state(st)
+    assert torch.equal(torch.get_rng_state(), st["torch"])
