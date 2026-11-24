@@ -53,7 +53,8 @@ STAMP = "SYNTHETIC - NOT RESULTS"
 ASSETS = ("tables/table1_main.tex", "tables/table2_per_render.tex", "tables/table3_masking.tex",
           "tables/table3b_link.tex", "tables/table4_seeds.tex", "tables/table5_comparisons.tex",
           "tables/table7_calibration.tex", "figures/fig1_renderings.pdf", "figures/fig3_flip_by_render.pdf",
-          "figures/fig4_tradeoff.pdf", "figures/fig6_attribution.pdf", "figures/fig7_masking.pdf")
+          "figures/fig4_tradeoff.pdf", "figures/fig5_reliability.pdf", "figures/fig6_attribution.pdf",
+          "figures/fig7_masking.pdf", "figures/fig8_confusion.pdf")
 
 
 class AssetRefused(RuntimeError):
@@ -375,6 +376,82 @@ def fig1(w, data_root):
     w.figure("fig1_renderings.pdf", fig)
 
 
+def frozen_test_predictions(freeze, sources):
+    """R0 (image models) or NUM (E5, B0) test predictions of the frozen run set, hash-checked by evaluate.py."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import evaluate as ev
+    sources["freeze manifest"] = sha(Path(freeze))
+    cols = ["run_id", "experiment_id", "seed", "split", "render_id", "true_label", "pred_class", "p_down", "p_neutral",
+            "p_up"]
+    df = pd.concat([pd.read_parquet(p, columns=cols) for p in ev.files_from_freeze(freeze)], ignore_index=True)
+    return df[(df["split"] == "test") & df["render_id"].isin(["R0", "NUM"])]
+
+
+SEQ = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]   # validated blue ramp
+
+
+def fig8(w, preds):
+    """Row-normalised confusion matrices on R0 (NUM for E5), all seeds pooled."""
+    from matplotlib.colors import LinearSegmentedColormap
+    exps = [e for e in ["E1", "E3b", "E3", "E5", "E2", "E4b", "E4"] if e in set(preds["experiment_id"])]
+    if not exps:
+        return
+    cmap = LinearSegmentedColormap.from_list("seq", SEQ)
+    cols = 4
+    rows_n = math.ceil(len(exps) / cols)
+    fig, axes = plt.subplots(rows_n, cols, figsize=(7.0, 1.9 * rows_n), squeeze=False)
+    names = ["down", "neutral", "up"]
+    for ax, e in zip(axes.flat, exps):
+        d = preds[preds["experiment_id"] == e]
+        cm = np.zeros((3, 3))
+        np.add.at(cm, (d["true_label"].to_numpy(), d["pred_class"].to_numpy()), 1)
+        cmn = cm / cm.sum(1, keepdims=True)
+        ax.imshow(cmn, cmap=cmap, vmin=0, vmax=1)
+        for i in range(3):
+            for j in range(3):
+                ax.text(j, i, f"{cmn[i, j]:.2f}", ha="center", va="center", fontsize=7,
+                        color="white" if cmn[i, j] > 0.5 else INK)
+        ax.set_xticks(range(3), names, fontsize=6.5)
+        ax.set_yticks(range(3), names, fontsize=6.5)
+        ax.tick_params(length=0, colors=INK2)
+        for s in ax.spines.values():
+            s.set_visible(False)
+        ax.set_title(f"{e} ({d['seed'].nunique()} seeds)", fontsize=8, color=INK, loc="left")
+    for ax in axes.flat[len(exps):]:
+        ax.set_visible(False)
+    axes[0, 0].set_ylabel("true class", fontsize=7, color=INK2)
+    axes[-1, 0].set_xlabel("predicted class", fontsize=7, color=INK2)
+    fig.tight_layout()
+    w.figure("fig8_confusion.pdf", fig)
+
+
+def fig5(w, preds):
+    """Reliability diagrams on R0 (NUM for E5), 15 equal-width bins, all seeds pooled."""
+    from src.evaluation.calibration import reliability_table
+    panels = [("ResNet-18", ARCH["ResNet-18"]), ("DeiT-S", ARCH["DeiT-S"]), ("Numeric 1D CNN", ["E5"])]
+    fig, axes = plt.subplots(1, 3, figsize=(7.0, 2.4), sharey=True)
+    for ax, (title, exps) in zip(axes, panels):
+        style_axes(ax)
+        ax.xaxis.grid(True, color=GRID, linewidth=0.6)
+        ax.plot([0, 1], [0, 1], color=MUTED, linewidth=0.8, linestyle="--", zorder=1)
+        for e in exps:
+            d = preds[preds["experiment_id"] == e]
+            if d.empty:
+                continue
+            t = reliability_table(d[["p_down", "p_neutral", "p_up"]].to_numpy(), d["true_label"].to_numpy())
+            t = t[t["n"] >= 30]                        # sparse bins are noise, not calibration
+            k = REGIME.get(e, 0)
+            ax.plot(t["confidence"], t["accuracy"], color=SERIES[k], linewidth=2, marker=["o", "s", "^"][k],
+                    markersize=4, label=REGIME_LEGEND[k] if e in REGIME else "E5", zorder=3)
+        ax.set_xlim(0.3, 1.0)
+        ax.set_ylim(0.0, 1.0)
+        ax.set_title(title, fontsize=9, color=INK, loc="left")
+        ax.set_xlabel("confidence (top-1 probability)", fontsize=7.5, color=INK2)
+    axes[0].set_ylabel("accuracy", fontsize=8, color=INK2)
+    shared_legend(fig, axes[0])
+    w.figure("fig5_reliability.pdf", fig)
+
+
 # ------------------------------------------------------------------------------------------------ main
 def generate(eval_dir, out, masking_dir=None, attribution_dir=None, freeze=None, data_root=None,
              allow_synthetic=False):
@@ -415,6 +492,10 @@ def generate(eval_dir, out, masking_dir=None, attribution_dir=None, freeze=None,
             link = attribution_link(attribution_dir, freeze, sources)
             if link is not None and len(link):
                 table3b(w, link)
+    if freeze:
+        preds = frozen_test_predictions(freeze, sources)
+        fig5(w, preds)
+        fig8(w, preds)
     if data_root:
         fig1(w, data_root)
     manifest = {"synthetic": synthetic, "sources": sources, "written": sorted(w.written)}

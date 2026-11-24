@@ -119,3 +119,18 @@ def test_missing_evaluation_tables_are_refused(tmp_path):
     (tmp_path / "eval").mkdir()
     with pytest.raises(mra.AssetRefused, match="run scripts/evaluate.py"):
         mra.generate(tmp_path / "eval", tmp_path / "out")
+
+
+def test_reliability_and_confusion_figures_come_from_the_frozen_predictions(synthetic_eval, tmp_path):
+    import hashlib
+    import json
+    preds = sorted((synthetic_eval.parent / "predictions").glob("*.parquet"))
+    man = {"runs": [{"run_id": p.stem, "prediction_path": str(p),
+                     "prediction_sha256": hashlib.sha256(p.read_bytes()).hexdigest()} for p in preds]}
+    freeze = tmp_path / "freeze.json"
+    freeze.write_text(json.dumps(man))
+    out = mra.generate(synthetic_eval, tmp_path / "out", freeze=freeze, allow_synthetic=True)
+    assert {"figures/fig5_reliability.pdf", "figures/fig8_confusion.pdf"} <= set(out["written"])
+    assert "freeze manifest" in out["sources"]
+    for f in ("fig5_reliability.pdf", "fig8_confusion.pdf"):
+        assert (tmp_path / "out" / "figures" / f).read_bytes()[:4] == b"%PDF"
