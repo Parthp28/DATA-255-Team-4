@@ -39,6 +39,7 @@ from torch.utils.data import DataLoader  # noqa: E402
 from src import tracking  # noqa: E402
 from src.common.config import ExperimentConfig  # noqa: E402
 from src.common.schema import RENDER_IDS, validate_prediction_frame  # noqa: E402
+from src.evaluation.gate import D16_GPU, is_d16_gpu  # noqa: E402
 from src.training.datasets import ChartImageDataset, NumericWindowDataset, PairedChartDataset  # noqa: E402
 from src.training.trainer import Trainer  # noqa: E402
 
@@ -219,6 +220,9 @@ def main(argv=None):
               "config_sha256": cfg.sha256(), "pretrained": bool(a.pretrained) and not cfg.is_numeric,
               "amp": bool(cfg.amp) and device.type == "cuda", **tracking.environment_info(device), **prov,
               "subset": {"train_windows": len(data.train_ids), "eval_windows": len(data.val_ids)}, "checks": {}}
+    if device.type == "cuda":                      # G3 runs on the D16 GPU (NVIDIA GeForce RTX 5090)
+        report["checks"]["d16_gpu"] = {"gpu_model": report["gpu_model"], "required": D16_GPU,
+                                       "pass": is_d16_gpu(report["gpu_model"])}
     report["checks"]["finite_step"] = check_finite_step(cfg, data, device, a.pretrained, out / "finite")
     report["checks"]["overfit"] = check_overfit(cfg, data, device, a.pretrained, out / "overfit", a.overfit_steps)
     report["checks"]["resume"], resumed = check_resume(cfg, data, device, a.pretrained, out)

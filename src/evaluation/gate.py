@@ -40,8 +40,19 @@ def owner_of(experiment_id: str) -> str:
     return EXPERIMENT_OWNERS[base]
 
 
-# Experiments without an image backbone: plan 5.1 runs them on CPU (E5 may move to a T4 if CPU is too slow).
+# Experiments without an image backbone: plan 5.1 runs them on CPU.
 CPU_TRACK_EXPERIMENTS = ("E5", "B0")
+
+# D16 (amended before the first reported GPU run; see docs/compute_environment.md): every reported image-model run
+# (E1, E2, E3b, E4b, E3, E4) on the same NVIDIA GeForce RTX 5090. B0 and E5 run on CPU.
+D16_GPU = "NVIDIA GeForce RTX 5090"
+
+
+def is_d16_gpu(name) -> bool:
+    """True only for the D16 device; vendor prefixes and spacing are normalised, other models (including other
+    RTX 5090 variants such as a laptop GPU) are not."""
+    n = " ".join(str(name or "").lower().replace("nvidia", " ").replace("geforce", " ").split())
+    return n == "rtx 5090"
 
 
 def has_image_backbone(record: dict) -> bool:

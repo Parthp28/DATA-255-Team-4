@@ -83,7 +83,7 @@ conditions:
 - full data;
 - not synthetic;
 - pretrained backbone for the image models;
-- an NVIDIA T4 GPU (D16).
+- for the image models, the D16 GPU (NVIDIA GeForce RTX 5090); for E5 and B0, CPU.
 
 `scripts/evaluate.py --runs-from outputs/results_freeze.json` re-verifies every hash.
 

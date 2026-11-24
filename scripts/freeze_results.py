@@ -7,8 +7,8 @@ For every final experiment (E1, E2, E3b, E4b, E3, E4, E5) and seed 0-2 exactly o
 RESULT_VALIDATED; complete or promoted; trained with the configuration frozen in configs/frozen/<exp>.yaml
 (verified file; same scientific config for all three seeds); carrying test predictions whose sha256 equals
 the validated hash; full data (no --max-steps), clean git tree, non-synthetic, pretrained backbone for image
-models, and image models on the GPU type fixed by D16 (NVIDIA T4). E5 and B0 run on CPU (plan 5.1); E5 may
-also run on a T4, never on another GPU.
+models, and image models on the single GPU fixed by D16 (NVIDIA GeForce RTX 5090). E5 and B0 run on CPU
+(plan 5.1).
 
 The manifest records scientific provenance only (run ids, prediction hashes, frozen-config hashes, commit,
 data and render versions, technical owner, GPU model); never who ran a job. scripts/evaluate.py
@@ -29,11 +29,10 @@ sys.path.insert(0, str(ROOT))
 
 from src.common.schema import sha256_file  # noqa: E402
 from src.evaluation.frozen import FrozenConfigError, run_matches_frozen, verify_frozen  # noqa: E402
-from src.evaluation.gate import has_image_backbone, logistics_fields  # noqa: E402
+from src.evaluation.gate import D16_GPU, has_image_backbone, is_d16_gpu, logistics_fields  # noqa: E402
 
 FINAL_EXPERIMENTS = ("E1", "E2", "E3b", "E4b", "E3", "E4", "E5")
 SEEDS = (0, 1, 2)
-D16_GPU = "T4"        # decision D16 (unchanged): every reported run on an NVIDIA T4
 
 
 def problems(rec: dict, frozen_path: Path, frozen_sha: str, test_mode: bool) -> list:
@@ -63,12 +62,12 @@ def problems(rec: dict, frozen_path: Path, frozen_sha: str, test_mode: bool) -> 
             p.append("synthetic data")
         gpu = str(rec.get("gpu_model", ""))
         if has_image_backbone(rec):
-            if D16_GPU not in gpu:
-                p.append(f"gpu_model {rec.get('gpu_model')!r} is not an NVIDIA {D16_GPU} (D16)")
+            if not is_d16_gpu(gpu):
+                p.append(f"gpu_model {rec.get('gpu_model')!r} is not the D16 GPU ({D16_GPU})")
             if rec.get("pretrained") is not True:
                 p.append("image model without pretrained weights (D9)")
-        elif gpu != "cpu" and D16_GPU not in gpu:
-            p.append(f"gpu_model {rec.get('gpu_model')!r}: E5 and B0 run on CPU or an NVIDIA {D16_GPU} (D16)")
+        elif gpu != "cpu":
+            p.append(f"gpu_model {rec.get('gpu_model')!r}: E5 and B0 run on CPU (D16)")
     return p
 
 

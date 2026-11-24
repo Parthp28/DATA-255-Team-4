@@ -138,7 +138,7 @@ def test_d11_select_freeze_promote_seeds_validate_freeze_evaluate(dummy, tmp_pat
     assert strict == ["E5: frozen in test mode"]
     s1 = json.loads((out / "runs" / finals[1]["run_id"] / "run.json").read_text())
     why = freeze_results.problems(s1, frozen, frec["config_sha256"], test_mode=False)
-    assert not any("D16" in w for w in why)              # plan 5.1: E5 runs on CPU; only image models need the T4
+    assert not any("D16" in w for w in why)              # plan 5.1: E5 runs on CPU; only image models need the D16 GPU
     other_gpu = {**s1, "gpu_model": "NVIDIA A100-SXM4-40GB"}
     assert any("D16" in w for w in freeze_results.problems(other_gpu, frozen, frec["config_sha256"], test_mode=False))
     man = tmp_path / "results_freeze.json"
