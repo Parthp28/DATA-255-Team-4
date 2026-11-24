@@ -70,7 +70,7 @@ generator refuses synthetic evaluation outputs; with `--allow-synthetic` it writ
 
 1. checks out the frozen commit;
 2. installs the requirements;
-3. runs `scripts/check_gpu.py`, which stops anything but an NVIDIA T4 (D16);
+3. runs `scripts/check_gpu.py`, which stops anything but the D16 GPU (NVIDIA GeForce RTX 5090);
 4. verifies and unpacks the shards;
 5. hands over to `scripts/run_queue.py`.
 

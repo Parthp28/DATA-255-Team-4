@@ -10,7 +10,7 @@
 # Steps, each of which stops the session on failure:
 #   1. optional checkout of the frozen commit (detached), refusing a dirty tree
 #   2. pip install -r requirements.txt (skip with --no-install)
-#   3. D16: scripts/check_gpu.py must report an NVIDIA T4
+#   3. D16: scripts/check_gpu.py must report the D16 GPU
 #   4. data: copy render_v1/, verify SHA256SUMS of the tars, extract the 21 shard folders, count the PNGs
 #   5. --check-only stops here; otherwise hand over to scripts/run_queue.py for the given lane
 #      (--dry-run passes through, so the queue lists what it would run and runs nothing)
@@ -42,7 +42,7 @@ fi
 echo "commit: $(git rev-parse HEAD)"
 [ "$INSTALL" = 1 ] && python -m pip install -q -r requirements.txt
 
-python scripts/check_gpu.py            # exits non-zero on anything but a T4 (D16)
+python scripts/check_gpu.py            # exits non-zero on anything but the D16 GPU
 
 mkdir -p data
 if [ ! -f data/render_v1/render_registry.parquet ]; then

@@ -139,16 +139,16 @@ Masking measures Δp for the original predicted class ĉ, so both methods explai
 
 **What stops a run on the wrong GPU from entering the results?**
 D16 is enforced at both ends:
-- At launch: `scripts/check_gpu.py` stops a session that is not on an NVIDIA T4.
-- At the results freeze: `scripts/freeze_results.py` rejects image-model runs that are not on a T4.
+- At launch: `scripts/train.py` and `scripts/check_gpu.py` refuse any GPU other than the D16 GPU (NVIDIA GeForce RTX 5090).
+- At the results freeze: `scripts/freeze_results.py` rejects image-model runs that are not on the D16 GPU.
 
-E5 and B0 are the exception: they run on CPU (or a T4) by design.
+E5 and B0 are the exception: they run on CPU by design.
 
 **How is resuming after a session dies exact?**
 `last.pt` holds the model, optimizer, scheduler, AMP scaler, all RNG states and the counters. The smoke test interrupts a run and resumes it, and the losses match the uninterrupted run. On CPU the difference was 0.0.
 
 **How is the compute footprint measured?**
-GPU-hours come from each run record's runtime-measured `gpu_minutes`. Energy is GPU-hours × 70 W (T4 board power). CPU runs report wall time only (`scripts/compute_ledger.py`).
+GPU-hours come from each run record's runtime-measured `gpu_minutes`. Energy is GPU-hours × 575 W (the RTX 5090's board power), an upper bound. CPU runs report wall time only (`scripts/compute_ledger.py`).
 
 **Is anything still undecided before E5?**
 Yes, two things: E5's weight decay (`train.py` refuses to run until it is set), and whether `Numeric1DCNN` keeps BatchNorm. The plan's description does not mention BatchNorm. Both are frozen together with the E5 config.

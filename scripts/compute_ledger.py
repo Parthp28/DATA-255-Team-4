@@ -6,7 +6,8 @@
 Reads every outputs/runs/*/run.json and totals the measured compute per experiment and run category:
 
     GPU-hours  = gpu_minutes / 60 from each run record (runtime-measured, never estimated)
-    energy kWh = GPU-hours x board power of the recorded GPU model (NVIDIA T4: 70 W, plan 13)
+    energy kWh = GPU-hours x board power of the recorded GPU model (RTX 5090: 575 W; T4: 70 W) -- an upper bound,
+                 since a GPU rarely draws its full board power
 
 Categories: final (trained with a frozen configuration), tuning/dev (everything else that completed), debug
 (--max-steps), superseded, and failed. CPU runs (E5, B0) count wall-clock hours and no GPU energy; CPU energy is not
@@ -23,7 +24,7 @@ from pathlib import Path
 
 import pandas as pd
 
-BOARD_POWER_W = {"T4": 70.0}            # plan 13: T4 70 W board power
+BOARD_POWER_W = {"RTX 5090": 575.0, "T4": 70.0}   # NVIDIA board power (total graphics power); D16 GPU first
 LEDGER_COLUMNS = ["experiment_id", "category", "gpu_model", "runs", "gpu_hours", "wall_hours", "energy_kwh"]
 SAFE_FIELDS = ("run_id", "experiment_id", "status", "max_steps", "frozen_config_path", "gpu_model", "gpu_minutes",
                "wall_minutes", "data_version")
@@ -93,7 +94,7 @@ def to_latex(led: pd.DataFrame, source_sha: str = "") -> str:
         lines.append(f"{r.experiment_id} & {r.category} & {dev} & {r.runs} & {f(r.gpu_hours)} & {f(r.wall_hours)} & "
                      f"{f(r.energy_kwh, 3)} \\\\")
     lines += ["\\bottomrule", "\\end{tabular}",
-              "\\par\\smallskip\\parbox{0.95\\linewidth}{\\scriptsize kWh = GPU-hours $\\times$ 70 W NVIDIA T4 "
+              "\\par\\smallskip\\parbox{0.95\\linewidth}{\\scriptsize kWh = GPU-hours $\\times$ the board power of the recorded GPU (NVIDIA GeForce RTX 5090: 575 W), an upper bound; "
               "board power. CPU runs (E5, B0) add wall-clock time only; CPU energy was not measured. -- = GPU model "
               "without a recorded board power.}", "\\end{table}"]
     return "\n".join(lines) + "\n"

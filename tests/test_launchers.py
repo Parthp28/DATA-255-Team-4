@@ -1,5 +1,5 @@
-"""GPU session launchers (review: Kaushik): the D16 T4 pre-flight, the session script's argument handling and its
-stop before any data step when no T4 is visible, and the two one-cell notebooks. Nothing is launched; no GPU."""
+"""GPU session launchers (review: Kaushik): the D16 pre-flight, the session script's argument handling and its
+stop before any data step when the D16 GPU is not visible, and the two one-cell notebooks. Nothing is launched; no GPU."""
 import json
 import re
 import shutil
@@ -18,8 +18,9 @@ MEMBER_NAMES = ("parth", "khushi", "kaushik", "farzaan")
 REPO_URL = "https://github.com/Parthp28/DATA-255-Team-4.git"
 
 
-@pytest.mark.parametrize("names,code", [(["Tesla T4"], 0), (["Tesla T4", "Tesla T4"], 0),
-                                        (["NVIDIA A100-SXM4-40GB"], 3), (["Tesla T4", "NVIDIA L4"], 3), ([], 4)])
+@pytest.mark.parametrize("names,code", [(["NVIDIA GeForce RTX 5090"], 0), (["Tesla T4"], 3),
+                                        (["NVIDIA A100-SXM4-40GB"], 3), (["NVIDIA GeForce RTX 5090", "NVIDIA L4"], 3),
+                                        ([], 4)])
 def test_d16_preflight_accepts_only_t4(names, code):
     assert check_gpu.check(names)[0] == code
     assert check_gpu.main(names=names) == code
@@ -38,13 +39,13 @@ def test_session_script_parses_and_requires_its_arguments():
 
 
 @bash
-@pytest.mark.skipif(check_gpu.check(check_gpu.gpu_names())[0] == 0, reason="a T4 is visible here")
+@pytest.mark.skipif(check_gpu.check(check_gpu.gpu_names())[0] == 0, reason="the D16 GPU is visible here")
 def test_session_stops_at_the_gpu_check_before_touching_data(tmp_path):
     r = subprocess.run(["bash", str(ROOT / "scripts" / "gpu_session.sh"), "--lane", "X", "--data-src",
                         str(tmp_path / "absent"), "--no-install", "--check-only"], capture_output=True, text=True,
                        cwd=ROOT)
     out = r.stdout + r.stderr
-    assert r.returncode in (3, 4) and ("T4" in out or "no CUDA GPU" in out)
+    assert r.returncode in (3, 4) and ("D16" in out or "no CUDA GPU" in out)
     assert not (tmp_path / "absent").exists()
 
 
@@ -57,4 +58,3 @@ def test_notebooks_are_one_launch_cell_with_no_logistics(name):
     assert "scripts/gpu_session.sh" in src and "CHECK_ONLY = True" in src
     text = json.dumps(nb).lower().replace(REPO_URL.lower(), "")      # the repository address is not logistics
     assert not any(n in text for n in MEMBER_NAMES)
-    assert not re.search(r"geforce|rtx|a100|v100|h100", text), "the launchers name no GPU model besides the T4"

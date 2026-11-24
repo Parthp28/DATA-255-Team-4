@@ -1,16 +1,20 @@
-"""D16 pre-flight: refuse a GPU session that is not on an NVIDIA T4 (plan 14.5). Owner: Kaushik (tooling).
+"""D16 pre-flight: refuse a GPU session that is not on the D16 GPU (docs/compute_environment.md). Owner: Kaushik.
 
-    python scripts/check_gpu.py            # exit 0 on a T4; 3 on any other GPU; 4 when no CUDA GPU is visible
+    python scripts/check_gpu.py            # exit 0 on the D16 GPU; 3 on any other GPU; 4 when no CUDA GPU is visible
 
-Every reported run uses the same GPU type (D16, unchanged). The queue runner and train.py record the runtime GPU
-model, and freeze_results.py rejects image-model runs that are not on a T4. This check stops a session before it
-spends any time on a wrong device.
+Every reported image-model run uses the same GPU (D16: NVIDIA GeForce RTX 5090). train.py refuses any other GPU and
+freeze_results.py rejects image-model runs from one; this check stops a session before it spends any time.
 """
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-REQUIRED = "T4"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.evaluation.gate import D16_GPU, is_d16_gpu  # noqa: E402
+
+REQUIRED = D16_GPU
 
 
 def gpu_names() -> list[str]:
@@ -23,10 +27,10 @@ def gpu_names() -> list[str]:
 def check(names: list[str]) -> tuple[int, str]:
     if not names:
         return 4, "no CUDA GPU visible: this session cannot run GPU jobs"
-    bad = [n for n in names if REQUIRED not in n]
+    bad = [n for n in names if not is_d16_gpu(n)]
     if bad:
-        return 3, f"GPU {bad} is not an NVIDIA {REQUIRED}; D16 allows reported runs on T4 only. Stop this session."
-    return 0, f"OK: {names} (D16 {REQUIRED})"
+        return 3, f"GPU {bad} is not the D16 GPU ({REQUIRED}). Stop this session."
+    return 0, f"OK: {names} (D16)"
 
 
 def main(argv=None, names=None) -> int:

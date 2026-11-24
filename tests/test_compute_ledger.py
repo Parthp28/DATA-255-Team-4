@@ -20,7 +20,7 @@ def write(runs, rid, **rec):
 
 def make_runs(tmp):
     runs = tmp / "runs"
-    t4 = "Tesla T4"
+    t4 = "NVIDIA GeForce RTX 5090"
     write(runs, "E1_s0_a", experiment_id="E1", gpu_model=t4, gpu_minutes=60.0, wall_minutes=61.0)
     write(runs, "E1_s0_b", experiment_id="E1", gpu_model=t4, gpu_minutes=30.0, wall_minutes=31.0)
     write(runs, "E1_s1_c", experiment_id="E1", gpu_model=t4, gpu_minutes=120.0, wall_minutes=121.0,
@@ -34,8 +34,8 @@ def make_runs(tmp):
 def test_gpu_hours_and_energy_come_from_the_records(tmp_path):
     led = cl.ledger(cl.load_records(make_runs(tmp_path))).set_index(["experiment_id", "category"])
     e1 = led.loc[("E1", "tuning/dev")]
-    assert e1["runs"] == 2 and math.isclose(e1["gpu_hours"], 1.5) and math.isclose(e1["energy_kwh"], 1.5 * 0.070)
-    assert math.isclose(led.loc[("E1", "final"), "energy_kwh"], 2.0 * 0.070)
+    assert e1["runs"] == 2 and math.isclose(e1["gpu_hours"], 1.5) and math.isclose(e1["energy_kwh"], 1.5 * 0.575)
+    assert math.isclose(led.loc[("E1", "final"), "energy_kwh"], 2.0 * 0.575)
     assert led.loc[("E2", "debug"), "runs"] == 1 and led.loc[("E2", "superseded"), "runs"] == 1
     cpu = led.loc[("E5", "tuning/dev")]
     assert cpu["gpu_hours"] == 0 and cpu["energy_kwh"] == 0 and math.isclose(cpu["wall_hours"], 0.05)
@@ -49,7 +49,7 @@ def test_logistics_fields_never_reach_the_ledger(tmp_path):
     assert cl.main(["--runs-dir", str(runs), "--out", str(out), "--tex", str(tex)]) == 0
     text = out.read_text() + tex.read_text()
     assert "someone" not in text and "lane" not in text.lower() and "executor" not in text.lower()
-    assert "70 W" in tex.read_text() and tex.read_text().count("\\begin{") == tex.read_text().count("\\end{")
+    assert "575 W" in tex.read_text() and tex.read_text().count("\\begin{") == tex.read_text().count("\\end{")
 
 
 def test_unknown_gpu_energy_is_not_claimed(tmp_path):

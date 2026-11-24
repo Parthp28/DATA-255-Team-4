@@ -52,7 +52,7 @@ Owner: Kaushik (model code), Farzaan (E5 runs).
 
 ## 4. E5 fits on CPU
 
-Plan 5.1 runs E5 on CPU and moves it to a T4 only if CPU takes more than about 30 minutes in total.
+Plan 5.1 runs E5 on CPU (D16 keeps it there).
 
 The estimate below used synthetic numeric windows of the production size (29,900 train and 7,200 val), through the
 shared trainer. One epoch took 2.7 s with 4 CPU threads and 6.9 s with 24. The worst case is the 2 D11 tuning runs
