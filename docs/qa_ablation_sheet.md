@@ -100,3 +100,55 @@ E3b and E4b train on the same pairs as E3 and E4 with λ = 0. A control that saw
 **Why are heatmaps only supporting evidence?** Grad-CAM and attention rollout show where a method assigns importance, not what causes the decision. Masking a region and comparing with an area-matched random mask is a direct intervention, so it is the stronger evidence.
 
 **What do our key results mean?** (after G6) State each result with its metric, its baseline, the comparison, and the scope "under our tested renderings and training setup."
+
+## 4. Pipeline questions (how the code enforces the plan)
+
+These answers describe the code on `main`, not results. Each one names the file a reviewer can open.
+
+**How do you guarantee that no test number comes from a tuned or unfrozen configuration?**
+Five checks enforce this:
+- `scripts/train.py` writes test predictions only for a verified `configs/frozen/` file.
+- The owner signs `RESULT_VALIDATED` with `scripts/validate_run.py`.
+- `scripts/evaluate.py` refuses any file that is unsigned, changed after signing, or from an unfrozen configuration.
+- `scripts/freeze_results.py` lists exactly one valid run per experiment and seed.
+- `--runs-from` re-checks every prediction hash.
+
+**How is a paired step built?**
+One forward pass runs over all 128 images (64 windows × 2 renderings). The logits are then split into the two views. The pass must be joint: ResNet-18's BatchNorm then sees the same 128-image batch statistics as E1 (`docs/training_notes.md`).
+
+**Does a window get new rendering pairs every epoch?**
+No. The pair is fixed per window, seeded by (seed, window index). At the same seed, E3b and E3 (and E4b and E4) therefore see identical pairs.
+
+**How do you know a heatmap's "grid" pixels are really the grid?**
+The pixel partition comes from the renderer's own draw list (`src/interpretability/regions.py`). It has six regions: candles, volume, grid, axes, plot background and margins. Before any mask is used, each PNG is hash-checked against the registry and against a fresh render.
+
+**What does the area-matched control remove?**
+It removes random 4 × 4 blocks of non-ink pixels in the same panel, trimmed to the region's pixel count. It never touches candles or volume bars and matches the area within 2% (T-M5). An image the mask does not change gives Δp = 0 exactly (T-M3).
+
+**What is the momentum baseline?**
+z_past = (Close[d] / Close[d−5] − 1) / (σ30 · √5) uses the label's own scaling, run backwards in time. The class thresholds are the training-split tertiles of z_past (`src/baselines.py`).
+
+**Why does Grad-CAM explain the predicted class?**
+Masking measures Δp for the original predicted class ĉ, so both methods explain the same decision.
+
+**What exactly is attention rollout here?**
+1. Average the attention over heads.
+2. Add the residual as 0.5·A + 0.5·I and renormalise the rows.
+3. Multiply across the 12 blocks.
+4. Take the CLS row over the 196 patches, with each patch's value spread evenly over its 16 × 16 pixels.
+
+**What stops a run on the wrong GPU from entering the results?**
+D16 is enforced at both ends:
+- At launch: `scripts/check_gpu.py` stops a session that is not on an NVIDIA T4.
+- At the results freeze: `scripts/freeze_results.py` rejects image-model runs that are not on a T4.
+
+E5 and B0 are the exception: they run on CPU (or a T4) by design.
+
+**How is resuming after a session dies exact?**
+`last.pt` holds the model, optimizer, scheduler, AMP scaler, all RNG states and the counters. The smoke test interrupts a run and resumes it, and the losses match the uninterrupted run. On CPU the difference was 0.0.
+
+**How is the compute footprint measured?**
+GPU-hours come from each run record's runtime-measured `gpu_minutes`. Energy is GPU-hours × 70 W (T4 board power). CPU runs report wall time only (`scripts/compute_ledger.py`).
+
+**Is anything still undecided before E5?**
+Yes, two things: E5's weight decay (`train.py` refuses to run until it is set), and whether `Numeric1DCNN` keeps BatchNorm. The plan's description does not mention BatchNorm. Both are frozen together with the E5 config.

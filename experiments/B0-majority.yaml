@@ -1,0 +1,22 @@
+# B0 trivial baseline (majority), plan 5.1 / 15.2. Technical owner: Farzaan. Nothing is trained or tuned; the
+# recipe fields below are unused and set to zero so no one mistakes them for settings. Run with scripts/run_b0.py.
+experiment_id: B0-majority
+model: b0_majority
+seed: 0
+phase: dev
+data_version: data_v1
+render_version: render_v1
+train_renders: [NUM]
+pairing: none
+loss: ce
+consistency_lambda: 0.0
+lr: 0.0
+weight_decay: 0.0
+images_per_step: 0
+epochs_max: 0
+patience: 0
+early_stop_metric: none
+amp: false
+grad_clip: 0.0
+image_size: 0
+frozen: false
