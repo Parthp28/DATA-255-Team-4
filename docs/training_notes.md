@@ -35,18 +35,30 @@ passed into the dataset, and must be decided before any paired run. The current 
 
 Owner: Kaushik (sampler).
 
-## 3. E5 numeric 1D CNN: BatchNorm after each convolution (open)
+## 3. E5 numeric 1D CNN: architecture and weight decay (decided before any E5 test prediction)
 
-The plan specifies the E5 model as "3 conv layers (k = 3, 64 ch), global average pool, linear head".
-`src/models/numeric.py` implements Conv1d -> BatchNorm1d -> ReLU three times, then the global average pool and the
-linear head. The plan does not mention BatchNorm. There are two options:
+**Architecture, kept as implemented.** Three blocks of Conv1d(k = 3, 64 channels, padding 1), BatchNorm1d and ReLU
+(5 -> 64 -> 64 -> 64 channels over the 30 days), then a global average pool over time and Linear(64 -> 3). BatchNorm
+has been part of the team's E5 implementation (`src/models/numeric.py`) since it was first committed on 2026-11-22,
+before any E5 result existed. The plan's summary ("3 conv layers (k = 3, 64 ch), global average pool, linear head")
+does not exclude it, so it stays, and the report states the full architecture.
 
-- keep BatchNorm and state it in the report's method section;
-- remove it to match the plan's wording literally.
+**Weight decay = 0.01.** The plan's D11 grid tunes only lr for E5 and leaves weight decay open. It was settled by a
+small, prospective, validation-only comparison:
 
-**Open, pre-E5 freeze decision**, together with E5's `weight_decay` (`null` in `experiments/E5.yaml`;
-`scripts/train.py` refuses to run until it is set). Whichever option is chosen is frozen with the E5 config through
-`scripts/freeze_config.py`, and the report describes the model that was actually run.
+- Candidates: weight decay 0.01 and 0.05.
+- Held fixed: seed 0, lr 1e-3 (the E5 base value), the same data, preprocessing, architecture and D10 recipe.
+- Rule: higher validation Macro F1 wins. A tie at 3 decimals would have gone to 0.05, the `ExperimentConfig` and
+  shared-recipe default.
+
+| weight decay | validation Macro F1 (seed 0) |
+|---|---|
+| 0.01 | 0.3719 |
+| 0.05 | 0.3562 |
+
+Weight decay 0.01 was frozen at 2026-11-24 08:25 UTC, before any E5 test prediction existed. D11 then selected
+lr = 1e-3 over 3e-3 (validation Macro F1 0.3719 vs 0.3680) at that weight decay, and the config was frozen through
+`scripts/select_config.py`. Neither choice is revisited after test evaluation.
 
 Owner: Kaushik (model code), Farzaan (E5 runs).
 
