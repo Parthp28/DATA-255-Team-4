@@ -5,7 +5,7 @@ A counterfactual robustness study of ResNet-18 and DeiT-S on candlestick charts 
 DATA 255 Deep Learning and Computer Vision, Fall 2026, San José State University.
 Team: Parth Patel, Khushi Donda, Farzaan Dalwai, Kaushik Hariharan.
 
-**Final report:** IEEE Computer Society LaTeX source in [`report/`](report/) (`main.tex`, `references.bib`, and generated tables and figures in `report/generated/`).
+**Final report:** [`report/DATA255_Team4_Final_Report.pdf`](report/DATA255_Team4_Final_Report.pdf) (15 pages), compiled from the IEEE Computer Society LaTeX source in [`report/`](report/) at commit 330cfc8 (`main.tex`, `references.bib`, and generated tables and figures in `report/generated/`).
 
 ## Research question
 
