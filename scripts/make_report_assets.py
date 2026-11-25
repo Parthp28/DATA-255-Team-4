@@ -183,7 +183,7 @@ def table4(w, seeds):
             rows.append([e, name, fmt(r["s0"]), fmt(r["s1"]), fmt(r["s2"]), pm(r["mean"], r["sd"]),
                          fmt(r["cross_seed_disagreement"])])
     w.table("table4_seeds.tex", ["seeds.csv"], "Per-seed values and cross-seed disagreement (test, R0).",
-            "tab:seeds", "llccccc", ["Exp.", "Metric", "s0", "s1", "s2", "Mean $\\pm$ SD", "CSD"], rows,
+            "tab:seeds", "llccccc", ["Exp.", "Metric", "s0", "s1", "s2", "Mean $\\pm$ SD", "CSD"], rows, wide=True,
             note="CSD: share of test windows on which the seeds' R0 predictions disagree; every flip rate is read "
                  "next to it.")
 
@@ -254,7 +254,7 @@ def table3b(w, link):
     w.table("table3b_link.tex", sorted(k for k in w.sources if k.startswith(("attribution/", "freeze"))),
             "Attribution-to-flip link: AUROC of R0 attribution mass on a region for a flip under the rendering "
             "that changes it.", "tab:link", "lllccc", ["Exp.", "Method", "Region", "Rendering", "Flips", "AUROC"],
-            rows, note="-- = undefined (no flips or all flipped in the sample).")
+            rows, wide=True, note="-- = undefined (no flips or all flipped in the sample).")
 
 
 # ------------------------------------------------------------------------------------------------ figures

@@ -69,6 +69,8 @@ Full tables, ablations A1–A8, calibration, cross-seed disagreement and interpr
 
 The data and the rendered images are not in Git: about 1.3 GB, shared separately as `data_v1` / `render_v1`. They can also be rebuilt deterministically from the configs.
 
+What is in Git: the code, the configs, the frozen evaluation tables (`outputs/eval/`), the results-freeze manifest (`outputs/results_freeze.json`) and the validation-only selection logs (`outputs/selection/`). What is not in Git, because it is produced by running the pipeline: the frozen run configs (`configs/frozen/`, written by `select_config.py` / `freeze_config.py`), and the run directories, checkpoints and prediction files (`outputs/runs/`, `outputs/predictions/`). The commands below therefore regenerate those artifacts in order. The evaluation and report-asset steps need the run outputs from the training steps; they cannot be run from a fresh clone alone.
+
 ```bash
 pip install -r requirements.txt
 python scripts/build_dataset.py --config configs/data.yaml                      # data_v1
