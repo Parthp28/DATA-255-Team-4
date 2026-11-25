@@ -17,7 +17,7 @@ An ablation changes one component of the experiment while holding everything els
 - **Metrics:** seen flip rate, held-out flip rate, probability dispersion, Macro F1.
 - **Allowed conclusion:** "Training ResNet-18 on the four seen styles changed its seen flip rate by Δ (95% interval)."
 - **Not allowed:** "Augmentation makes CNNs rendering-invariant."
-- **Result (after G6):**
+- **Result (after G6):** frozen values in the report's planned-comparisons table (Table 5, row A1; `outputs/eval/comparisons.csv`).
 
 ### A2: E3b to E3 (consistency loss, CNN)
 - **Changed:** the loss gains λ · JS(p_a, p_b).
@@ -26,37 +26,37 @@ An ablation changes one component of the experiment while holding everything els
 - **Metrics:** seen and held-out flip rate, dispersion, Macro F1, ECE.
 - **Allowed conclusion:** "The consistency term added (or did not add) stability beyond seeing the same pairs."
 - **Not allowed:** crediting the whole E1 to E3 change to consistency.
-- **Result (after G6):**
+- **Result (after G6):** report Table 5, row A2 (`outputs/eval/comparisons.csv`).
 
 ### A3: E2 to E4b and A4: E4b to E4
 Same logic as A1 and A2, for DeiT-S.
-- **Result A3 (after G6):**
-- **Result A4 (after G6):**
+- **Result A3 (after G6):** report Table 5, row A3.
+- **Result A4 (after G6):** report Table 5, row A4.
 
 ### A5: E1 vs E2 (and E3b vs E4b, E3 vs E4)
-- **Changed:** architecture and its pretrained weights (ResNet-18, 11.7M parameters; DeiT-S, 22.1M).
+- **Changed:** architecture and its pretrained weights (ResNet-18, 11.18M parameters with the three-class head, 11.7M with the original 1000-class head; DeiT-S, 21.67M and 22.1M).
 - **Held constant:** data, recipe, tuning budget (4 runs each), resolution, renderings, evaluation.
 - **Why it matters:** our paper presentation (Bai et al., NeurIPS 2021) showed that apparent Transformer robustness can come from the training recipe, so we hold the recipe fixed and report the size difference openly.
 - **Allowed conclusion:** "Under our tested renderings and training setup, DeiT-S showed a lower (or higher) flip rate than ResNet-18," read at matched Macro F1.
 - **Not allowed:** "Transformers are more robust than CNNs."
-- **Result (after G6):**
+- **Result (after G6):** report Table 5, row A5; Macro F1 and flip rates per model in Table 3 (`outputs/eval/seeds.csv`).
 
 ### A6: image models vs E5
 - **Changed:** input representation (224 × 224 chart vs the raw 30 × 5 matrix) and model family.
 - **Held constant:** windows, labels, splits, test windows, metrics.
 - **Why it matters:** if numbers alone predict as well, converting to an image adds little predictive value.
 - **Not allowed:** "Images contain no information."
-- **Result (after G6):**
+- **Result (after G6):** report Table 5, row A6 (E1 minus E5 Macro F1).
 
 ### A7: seen vs held-out renderings
 - **Changed:** which renderings we evaluate on; the trained model is the same.
 - **Why it matters:** R3 is an unseen decoration change, R5 and R6 are unseen geometric changes. If gains appear on seen styles only, the learned invariance does not generalize.
-- **Result (after G6):**
+- **Result (after G6):** report Table 5, row A7; per-rendering flip rates in Table 4 (`outputs/eval/per_render.csv`).
 
 ### A8: B0 vs everything
 - **Changed:** learning vs trivial rules (majority class, stratified random, momentum).
 - **Why it matters:** "better than chance" needs a concrete floor.
-- **Result (after G6):**
+- **Result (after G6):** report Table 3 (B0 rows, and each model's Macro F1 minus the best B0 with its bootstrap interval).
 
 ### The one sentence everyone must know
 E3b and E4b train on the same pairs as E3 and E4 with λ = 0. A control that saw one image per step would see half as many images, so any E3 gain could come from data volume instead of the loss. With identical pairs, the only difference is the consistency term.
@@ -67,7 +67,7 @@ E3b and E4b train on the same pairs as E3 and E4 with λ = 0. A control that saw
 
 **How does a residual block work?** Two 3 × 3 convolutions with batch normalization and ReLU, plus a skip connection that adds the block's input to its output; when the shape changes, a 1 × 1 convolution projects the skip path.
 
-**Why DeiT-S and not ViT-B?** DeiT-S has the ViT-Small shape (12 layers, 384-dimensional tokens, 6 heads, 22M parameters) and was trained data-efficiently on ImageNet-1k. ViT-B is about four times larger and would not fit three seeds of every experiment on T4s in five days.
+**Why DeiT-S and not ViT-B?** DeiT-S has the ViT-Small shape (12 layers, 384-dimensional tokens, 6 heads, 22M parameters) and was trained data-efficiently on ImageNet-1k. ViT-B is about four times larger and would not fit three seeds of every experiment on T4s in five days (the original compute plan; the reported runs used one RTX 5090, decision D16).
 
 **How does a ViT read a chart?** The 224 × 224 image is cut into 16 × 16 patches (196 patches), each linearly projected to a token, with position embeddings and a class token added. Self-attention lets every patch exchange information with every other patch in every layer, and the class token is classified.
 
@@ -150,5 +150,5 @@ E5 and B0 are the exception: they run on CPU by design.
 **How is the compute footprint measured?**
 GPU-hours come from each run record's runtime-measured `gpu_minutes`. Energy is GPU-hours × 575 W (the RTX 5090's board power), an upper bound. CPU runs report wall time only (`scripts/compute_ledger.py`).
 
-**Is anything still undecided before E5?**
-Yes, two things: E5's weight decay (`train.py` refuses to run until it is set), and whether `Numeric1DCNN` keeps BatchNorm. The plan's description does not mention BatchNorm. Both are frozen together with the E5 config.
+**Was anything left undecided before E5?**
+Two things were open and both were decided before any E5 test prediction. E5's weight decay is 0.01, chosen by validation Macro F1 at seed 0 (0.372 against 0.356 for 0.05; `outputs/selection/E5_weight_decay.json`). `Numeric1DCNN` keeps its BatchNorm layers as implemented (`docs/training_notes.md`). Both are frozen in the E5 config.

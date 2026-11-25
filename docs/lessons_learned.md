@@ -26,3 +26,12 @@ What makes a useful entry: a concrete technical problem, how you found the cause
 - Evaluation: metrics that disagreed, statistics, seeds
 - Interpretability: heatmaps vs masking
 - Team integration: schemas, handoffs, frozen interfaces
+
+## Proposed entries awaiting owner confirmation
+
+The member named below did not write these entries. Parth Patel drafted them on 2026-11-24 from the records cited, and they count as the member's entries only after she confirms or edits them. No entries from Kaushik Hariharan or Farzaan Dalwai are in this log, and no documented incident was found from which to propose one.
+
+| Date | Member (owner to confirm) | Technical problem | Cause | Diagnosis (how we found it) | Solution | Lesson | Best practice going forward |
+|---|---|---|---|---|---|---|---|
+| 2026-11-23 | Khushi Donda | The first run of the G2 sample-audit script reported 224 passed and 28 failed | Two errors in the audit script, not in the figure sheet: the gridline check searched only the price panel and missed the fifth line at row 181 in the volume panel (24 failures); the R5 check required R5's changed pixels to be white, but a narrower body also reveals gridline gray (4 failures) | Comparing each failure with the figure sheet (`docs/g2_visual_sample_review.md`, Section 5) | Corrected both checks and strengthened the R5 test (R5 ink must be a subset of R0 ink, wick extremes unchanged); rerun: 264 passed, 0 failed | A failing check can be a bug in the checker; the data was not changed | Inspect failing cases against the artifact before changing it, and keep the failing checker version (here it was overwritten) |
+| 2026-11-21 | Khushi Donda | A float32 downcast defect in the Jensen-Shannon consistency loss, and no handling of empty batches | Not recorded in detail | Found during review of PR #1 (tests on two PyTorch versions, gradient checks against a float64 reference and `torch.autograd.gradcheck`; `docs/ai_use_log.md`) | Defect fixed; empty batches rejected (commit `d8842df`) | Numerical precision and empty inputs need their own tests | Check loss functions against a float64 reference and test degenerate inputs |
