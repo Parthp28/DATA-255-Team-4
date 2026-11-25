@@ -105,7 +105,7 @@ A rendering function $g_r$ maps a window to a $224 \times 224$ RGB image. For a 
 
 \textbf{Counts and balance.} The registry holds 50{,}050 windows (Table~\ref{tab:data}). Training classes are balanced by construction; validation and test, which use the training thresholds, are close to balanced.
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \footnotesize
 \caption{Dataset splits (anchor dates; class shares DOWN / NEUTRAL / UP).}
@@ -120,7 +120,7 @@ Test & 12{,}250 & 2020-02-13 to 2024-12-18 & 0.335 / 0.341 / 0.324 \\
 Purged & 700 & around both boundaries & not used \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \textbf{Gate G1.} Automated tests and an independent verifier re-derived every property from the artifacts: manifest hashes, the ticker universe, OHLCV hashes for every window, disjoint and chronologically ordered splits, no shared trading day across a boundary, the strict purge counts, thresholds that reproduce from training windows only (and change if validation or test windows are included), labels, and a recomputation of returns, volatility, and window rows from the raw files for 200 windows. All checks passed on the production data.
 
@@ -142,7 +142,7 @@ Seen factors may appear in training; held-out factors are never used for trainin
 % ---------------------------------------------------------------------------
 \section{Models}\label{sec:models}
 \subsection{ResNet-18 and the Shared Training Recipe}
-ResNet-18 \cite{he2016resnet} (11.7M parameters) is initialized from ImageNet-1k weights trained with a modern recipe (timm \texttt{resnet18.a1\_in1k} \cite{wightman2019timm, wightman2021resnet}) with a new three-class head. Both image models use one recipe (decision D10): AdamW, one linear warm-up epoch followed by cosine decay, at most 10 epochs with early stopping (patience 3) on validation Macro F1 averaged over the experiment's own training renderings, 128 images per step, fp16 mixed precision, gradient clipping at 1.0, ImageNet normalization, and no data augmentation beyond the renderings themselves. The checkpoint with the best validation score is used for all predictions.
+ResNet-18 \cite{he2016resnet} (11.18M parameters with the three-class head, 11.7M with the original 1000-class head) is initialized from ImageNet-1k weights trained with a modern recipe (timm \texttt{resnet18.a1\_in1k} \cite{wightman2019timm, wightman2021resnet}) with a new three-class head. Both image models use one recipe (decision D10): AdamW, one linear warm-up epoch followed by cosine decay, at most 10 epochs with early stopping (patience 3) on validation Macro F1 averaged over the experiment's own training renderings, 128 images per step, fp16 mixed precision, gradient clipping at 1.0, ImageNet normalization, and no data augmentation beyond the renderings themselves. The checkpoint with the best validation score is used for all predictions.
 
 \subsection{DeiT-S and the Consistency Loss}
 DeiT-S \cite{touvron2021deit} (21.67M parameters with the three-class head, 22.1M with the original 1000-class head; 12 layers, 384-dimensional tokens, 6 heads) reads $16 \times 16$ patches, 196 tokens plus a class token, and is initialized from ImageNet-1k weights (\texttt{deit\_small\_patch16\_224.fb\_in1k}) with a new three-class head. For paired training each step draws 64 windows, each shown in two distinct seen renderings $x_a$ and $x_b$ (128 images per step, as in the single-rendering runs; both views pass through one forward, which keeps the ResNet's batch-normalisation statistics comparable across runs; DeiT-S uses layer normalisation). The paired objective is
@@ -158,7 +158,7 @@ E5 applies a 1D CNN to the raw $30 \times 5$ array, with prices divided by the a
 \section{Experimental Design and Ablations}\label{sec:design}
 Table~\ref{tab:design} lists the experiments. All of them use the same data, labels, splits, test windows, resolution, epoch cap, and evaluation code; only the architecture, training renderings, loss, and $\lambda$ differ.
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \footnotesize
 \caption{Experiment matrix. Seen renderings: R0, R1, R2, R4.}
@@ -177,7 +177,7 @@ E4 & DeiT-S & seen pairs & paired CE + $\lambda$ JS \\
 E5 & 1D CNN on numbers & none (array) & CE \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \textbf{Ablations.} A1 (E1$\to$E3b) and A3 (E2$\to$E4b) add multi-rendering exposure; A2 (E3b$\to$E3) and A4 (E4b$\to$E4) add the consistency term on identical image pairs; A5 compares the architectures (E1 vs E2, E3b vs E4b, E3 vs E4); A6 compares the image models with the numeric baseline E5; A7 compares seen and held-out renderings for the same model; and A8 compares every model with the best trivial baseline.
 
@@ -207,7 +207,7 @@ Every number in this section comes from the frozen run set (26 runs: 18 image-mo
 
 \subsection{Predictive Performance}
 \gen{tables/table1_main.tex}{Table 1: main results, generated}
-All learned models were close to the trivial floor (Table~\ref{tab:main}). The best image model on Macro F1 was the R0-only ResNet E1 ($0.359 \pm 0.003$, accuracy 0.361); the strongest trivial baseline was the momentum rule (0.341), and the stratified random classifier reached $0.332 \pm 0.002$. Against the momentum rule, E1's Macro F1 difference was $+0.018$ with an interval of $[0.0003, 0.042]$, whose lower end is at zero; for every other model the Macro F1 interval included zero. Ranking quality was more clearly above chance: macro AUROC was 0.521 to 0.530 for the image models and $0.538 \pm 0.004$ for the numeric model E5, and every AUROC interval against the momentum rule excluded zero (E1: $+0.030$ $[0.014, 0.051]$; E5: $+0.038$ $[0.019, 0.063]$). The numeric baseline matched the image models: E1 minus E5 was $+0.007$ $[-0.001, 0.020]$ in Macro F1 and $-0.008$ $[-0.015, 0.001]$ in AUROC, both intervals including zero. No image model collapsed to one class; the largest predicted-class share on R0 was 0.43 and per-class F1 ranged from 0.32 to 0.39 (Fig.~\ref{fig:confusion}).
+All learned models were close to the trivial floor (Table~\ref{tab:main}). The best image model on Macro F1 was the R0-only ResNet E1 ($0.359 \pm 0.003$, accuracy 0.361); the strongest trivial baseline was the momentum rule (0.341), and the stratified random classifier reached $0.332 \pm 0.002$. Against the momentum rule, E1's Macro F1 difference was $+0.018$ with an interval of $[0.0003, 0.042]$, whose lower bound is only slightly above zero; for every other model the Macro F1 interval included zero. Ranking quality was more clearly above chance: macro AUROC was 0.521 to 0.530 for the image models and $0.538 \pm 0.004$ for the numeric model E5, and every AUROC interval against the momentum rule excluded zero (E1: $+0.030$ $[0.014, 0.051]$; E5: $+0.038$ $[0.019, 0.063]$). The numeric baseline matched the image models: E1 minus E5 was $+0.007$ $[-0.001, 0.020]$ in Macro F1 and $-0.008$ $[-0.015, 0.001]$ in AUROC, both intervals including zero. No image model collapsed to one class; the largest predicted-class share on R0 was 0.43 and per-class F1 ranged from 0.32 to 0.39 (Fig.~\ref{fig:confusion}).
 
 \subsection{Rendering Robustness}
 \gen{tables/table2_per_render.tex}{Table 2: per-rendering sensitivity, generated}
@@ -305,36 +305,36 @@ Table~\ref{tab:rubric} maps each rubric criterion, in the rubric's order, to how
 \caption{How each rubric criterion was met}
 \label{tab:rubric}
 \small
-\begin{tabularx}{\textwidth}{@{}p{2.6cm}YYp{3.6cm}@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.0cm}YY>{\raggedright\arraybackslash}p{3.2cm}@{}}
 \toprule
 \textbf{Criterion} & \textbf{How we met it} & \textbf{Evidence} & \textbf{External link or file} \\
 \midrule
 1. Report (7) & IEEE Computer Society journal template (IEEEtran, compsoc) used directly; vector figures and tables generated from the frozen results; no code or screenshots in the report & This PDF; Tables~\ref{tab:main}--\ref{tab:calibration}, Figs.~\ref{fig:renderings}--\ref{fig:confusion} & Canvas submission (PDF and \texttt{.tex} source) \\
-2. Sustainability (5) & SDG 9 (target 9.5) mapping and its limits; measured compute ledger & Section~\ref{sec:sustain}, Table~\ref{tab:ledger} & \texttt{scripts/compute\_ledger.py} \\
-3. Lessons learned (5) & Shared lessons log, failures and fixes, best practices & Section~\ref{sec:lessons} & \texttt{docs/lessons\_learned.md} \\
+2. Sustainability (5) & SDG 9 (target 9.5) mapping and its limits; measured compute ledger & Section~\ref{sec:sustain}, Table~\ref{tab:ledger} & \path{scripts/compute_ledger.py} \\
+3. Lessons learned (5) & Shared lessons log, failures and fixes, best practices & Section~\ref{sec:lessons} & \path{docs/lessons_learned.md} \\
 4. Publication or competition (3) & Novelty, extra experiments needed, venues & Section~\ref{sec:innovation} & \\
 5. Innovation (5) & Counterfactual renderings with held-out factors, paired controls, numeric baseline & Sections~\ref{sec:render}, \ref{sec:design} & \\
-6. Evaluation of performance (5) & Accuracy, Macro F1, per-class metrics, AUROC, confusion matrices; flip rates, dispersion, $\Delta$F1, class shift; ECE, Brier, reliability; mean $\pm$ SD over 3 seeds, cross-seed disagreement, block-bootstrap intervals; baselines B0 and E5; ablations A1 to A8; masking with controls & Sections~\ref{sec:metrics} to \ref{sec:interp}; Tables~\ref{tab:main}, \ref{tab:per_render}, \ref{tab:comparisons}, \ref{tab:masking} & \texttt{scripts/evaluate.py}, \texttt{outputs/eval/} \\
-7. Technical difficulty (7) & Leakage-controlled windows with derived purge; 345{,}450-image rendering registry with equivalence checks; two pretrained architectures; paired consistency training; resumable training; validation and results-freeze gates; interpretability with interventions & Sections~\ref{sec:data}--\ref{sec:design}, \ref{sec:lessons}; Appendix~\ref{app:technical} & GitHub repository, \texttt{tests/} \\
-8. LaTeX (1) & Written directly in LaTeX with the IEEE template; no conversion from another document format & \texttt{report/main.tex}, \texttt{report/references.bib} & Canvas source zip; GitHub \texttt{report/} \\
-9. Literature survey (5) & 30 references in 8 subsections with a stated research gap & Section~\ref{sec:related} & \texttt{report/references.bib} \\
+6. Evaluation of performance (5) & Accuracy, Macro F1, per-class metrics, AUROC, confusion matrices; flip rates, dispersion, $\Delta$F1, class shift; ECE, Brier, reliability; mean $\pm$ SD over 3 seeds, cross-seed disagreement, block-bootstrap intervals; baselines B0 and E5; ablations A1 to A8; masking with controls & Sections~\ref{sec:metrics} to \ref{sec:interp}; Tables~\ref{tab:main}, \ref{tab:per_render}, \ref{tab:comparisons}, \ref{tab:masking} & \path{scripts/evaluate.py}; results in this PDF \\
+7. Technical difficulty (7) & Leakage-controlled windows with derived purge; 345{,}450-image rendering registry with equivalence checks; two pretrained architectures; paired consistency training; resumable training; validation and results-freeze gates; interpretability with interventions & Sections~\ref{sec:data}--\ref{sec:design}, \ref{sec:lessons}; Appendix~\ref{app:technical} & \href{https://github.com/Parthp28/DATA-255-Team-4}{GitHub source and tests} \\
+8. LaTeX (1) & Written directly in LaTeX with the IEEE template; no conversion from another document format & \path{report/main.tex}, \path{report/references.bib} & Canvas source zip; GitHub \texttt{report/} \\
+9. Literature survey (5) & 30 references in 8 subsections with a stated research gap & Section~\ref{sec:related} & \path{report/references.bib} \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
 \section{Generative AI and Tool Use Disclosure}\label{app:genai}
-Team members used AI assistants for planning, code, tests, and drafting documentation and report text, as logged in \texttt{docs/ai\_use\_log.md}. AI tools did not choose the research questions, experiment design, or any reported number: every number comes from \texttt{scripts/evaluate.py} on the frozen run set, and every selection used the predeclared validation-only rules. Each member reviewed the code and text attributed to them. Table~\ref{tab:genai} lists the logged uses.
+Team members used AI assistants for planning, code, tests, and drafting documentation and report text, as logged in \texttt{docs/ai\_use\_log.md}. AI tools did not choose the research questions, experiment design, or any reported number: every number comes from \path{scripts/evaluate.py} on the frozen run set, and every selection used the predeclared validation-only rules. The entries below summarize the shared AI-use log and associated project artifacts. Table~\ref{tab:genai} lists the logged uses.
 \begin{table*}[!t]
 \centering
 \caption{AI and tool use (from the shared AI-use log)}
 \label{tab:genai}
-\small
-\begin{tabularx}{\textwidth}{@{}p{1.7cm}p{2.2cm}p{2.9cm}YYY@{}}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{2.9cm}YYY@{}}
 \toprule
 \textbf{Date} & \textbf{Member} & \textbf{Tool and model} & \textbf{Purpose and prompt category} & \textbf{Artifact affected} & \textbf{Human verification} \\
 \midrule
 2026-11-19 & Parth Patel & Claude (claude.ai), Claude Opus 5.5 & Project planning from the team specification and rubric & Execution plan, starter documentation, report skeleton & Reviewed and revised by the team \\
-2026-11-21 & Khushi Donda & Claude Code, Claude Sonnet 5.5 & Repository setup; consistency loss and its tests & \texttt{.gitignore}, initial commit, \texttt{src/training/losses.py}, \texttt{tests/test\_losses.py} & Owner review; tests on two PyTorch versions; gradient checks against a float64 reference \\
+2026-11-21 & Khushi Donda & Claude Code, Claude Sonnet 5.5 & Repository setup; consistency loss and its tests & \texttt{.gitignore}, initial commit, \path{src/training/losses.py}, \path{tests/test_losses.py} & Owner review; tests on two PyTorch versions; gradient checks against a float64 reference \\
 2026-11-22 & Farzaan Dalwai & Claude Code, Claude Opus 5.5 & Data and rendering pipelines (G1, G2) & \texttt{src/data}, \texttt{src/rendering}, build scripts, tests & Independent G1/G2 verification on the production artifacts \\
 2026-11-22 to 24 & Parth Patel & Claude Code, Claude Opus 5.5 & Evaluation and validation pipeline, training integration fixes, experiment driver, interpretability and report-asset tooling, report drafting & \texttt{src/evaluation}, \texttt{scripts/}, tests, this report's text & Full test suites, GPU smoke tests, validation gate on every run; text reviewed by the authors \\
 \bottomrule
