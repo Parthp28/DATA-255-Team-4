@@ -72,12 +72,28 @@ def check_latex(path: Path):
     return t
 
 
+def report_snapshot():
+    """{relative path: sha256} of everything under report/generated (the committed frozen-result assets)."""
+    import hashlib
+    gen = ROOT / "report" / "generated"
+    return {str(p.relative_to(gen)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(gen.rglob("*")) if p.is_file()} if gen.exists() else {}
+
+
 def test_synthetic_outputs_are_refused_without_the_flag_and_never_land_in_report(synthetic_eval, tmp_path):
+    # report/generated holds the committed assets of the frozen results, so the check is that a refused synthetic
+    # run changes nothing there (and stamps nothing anywhere under report/), not that the folder is absent.
+    before = report_snapshot()
     with pytest.raises(mra.AssetRefused, match="synthetic"):
         mra.generate(synthetic_eval, tmp_path / "out")
     with pytest.raises(mra.AssetRefused, match="under report/"):
         mra.generate(synthetic_eval, ROOT / "report" / "generated", allow_synthetic=True)
-    assert not (ROOT / "report" / "generated").exists()
+    with pytest.raises(mra.AssetRefused, match="under report/"):
+        mra.generate(synthetic_eval, ROOT / "report" / "generated" / "preview", allow_synthetic=True)
+    assert report_snapshot() == before
+    assert not (ROOT / "report" / "generated" / "preview").exists()
+    stamped = [p for p in (ROOT / "report").rglob("*.tex") if mra.STAMP in p.read_text(errors="ignore")]
+    assert stamped == []
     assert mra.main(["--eval-dir", str(synthetic_eval), "--out", str(tmp_path / "x")]) == 2
 
 
