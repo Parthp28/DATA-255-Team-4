@@ -88,7 +88,8 @@ conditions:
 `scripts/evaluate.py --runs-from outputs/results_freeze.json` re-verifies every hash.
 
 E5's weight decay is not set by the plan, which lists only lr for E5's D11 grid. `experiments/E5.yaml` leaves it
-`null`, and `train.py` refuses E5 until the owner records a value.
+`null`, and `train.py` refuses E5 without an explicit value. It was decided by a prospective, validation-only
+comparison (0.01 vs 0.05, seed 0); the result is recorded in `docs/training_notes.md` section 3.
 
 D13 is read as written in `select_lambda.py`: a candidate is eligible when its validation Macro F1 is at least the
 matching E3b/E4b validation Macro F1 minus 0.01, one-sided.

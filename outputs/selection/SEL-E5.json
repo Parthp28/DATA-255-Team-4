@@ -1,0 +1,25 @@
+{
+  "experiment_id": "E5",
+  "rule": "D11: highest validation Macro F1 (own renderings), seed 0",
+  "selected_run_id": "E5_s0_125d170f",
+  "frozen_config": "configs/frozen/E5.yaml",
+  "candidates": [
+    {
+      "run_id": "E5_s0_125d170f",
+      "lr": 0.001,
+      "weight_decay": 0.01,
+      "val_macro_f1_own_renders": 0.37193738506566315,
+      "selected": true
+    },
+    {
+      "run_id": "E5_s0_a933dcfc",
+      "lr": 0.003,
+      "weight_decay": 0.01,
+      "val_macro_f1_own_renders": 0.36802894583861673,
+      "selected": false
+    }
+  ],
+  "skipped": {},
+  "metrics_used": "validation only",
+  "created": "2026-11-24T08:25:49+00:00"
+}
